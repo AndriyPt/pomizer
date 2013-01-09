@@ -122,116 +122,155 @@ public class MavenUtils {
                     int lastDelimiterIndex = line.lastIndexOf(':');
                     line = line.substring(lastDelimiterIndex + 1).trim();
 
-                    if (line.startsWith(CompilationConstants.PACKAGE_ERROR_PREFIX)
-                            && line.endsWith(CompilationConstants.PACKAGE_ERROR_SUFIX)) {
-
-                        String packageName = line.substring(CompilationConstants.PACKAGE_ERROR_PREFIX.length(),
-                                line.length() - CompilationConstants.PACKAGE_ERROR_SUFIX.length()).trim();
-                        if (-1 == missingPackageErrors.indexOf(packageName)) {
-                            missingPackageErrors.add(packageName);
-                        }
-                    }
-                    else {
+                    if (!compilationErrorPackageDoesntExists(missingPackageErrors, line)) { 
                         if (line.contains(CompilationConstants.SYMBOL_ERROR_MESSAGE)) {
                             line = br.readLine();
                             if (null != line) {
 
-                                // Example of situation
-                                // [ERROR] /C:/test/src/TestClass.java:[42,36] : cannot find symbol
-                                // symbol: class Action
-                                if (line.startsWith(CompilationConstants.SYMBOL_ERROR_PREFIX)) {
-                                    String className = line
-                                            .substring(CompilationConstants.SYMBOL_ERROR_PREFIX.length()).trim();
-                                    if (-1 == missingClassErrors.indexOf(className)) {
-                                        missingClassErrors.add(className);
-                                    }
-                                }
+                                compilationErrorCannotFindClass(missingClassErrors, line);
 
-                                // Example of situation
-                                // [ERROR] /C:/test/src/TestClass.java:[5,29] : cannot find symbol
-                                // symbol : class TestClass
-                                // location: package com.test.second.third
-                                if (line.startsWith(CompilationConstants.SYMBOL_CLASS_ERROR_PREFIX)) {
-                                    String className = line.substring(
-                                            CompilationConstants.SYMBOL_CLASS_ERROR_PREFIX.length()).trim();
-                                    line = br.readLine();
-                                    if (line.startsWith(CompilationConstants.CLASS_LOCATION_PACKAGE_PREFIX)) {
-                                        String packageName = line.substring(
-                                                CompilationConstants.CLASS_LOCATION_PACKAGE_PREFIX.length()).trim();
+                                line = compilationErrorCannotFindClassWithPackage(missingClassErrors,
+                                        missingClassWithPackageErrors, br, line);
 
-                                        AbstractMap.SimpleEntry<String, String> classWithPackage = new SimpleEntry<String, String>(
-                                                className, packageName);
-
-                                        if (-1 == missingClassWithPackageErrors.indexOf(classWithPackage)) {
-                                            missingClassWithPackageErrors.add(classWithPackage);
-                                        }
-                                    }
-                                    else {
-                                        if (-1 == missingClassErrors.indexOf(className)) {
-                                            missingClassErrors.add(className);
-                                        }
-                                    }
-                                }
-
-                                // [ERROR] /C:/test/src/TestClass.java:54: cannot find symbol
-                                // symbol : method send(javax.jms.ObjectMessage)
-                                // location: interface javax.jms.MessageProducer
-                                if (line.startsWith(CompilationConstants.SYMBOL_METHOD_ERROR_PREFIX)) {
-                                    line = br.readLine();
-                                    if (line.startsWith(CompilationConstants.SYMBOL_LOCATION_INTERFACE_PREFIX)) {
-                                        String fullClassName = line.substring(
-                                                CompilationConstants.SYMBOL_LOCATION_INTERFACE_PREFIX.length()).trim();
-
-                                        final String packageName = ClassUtils.getPackageFromFullName(fullClassName);
-                                        final String className = ClassUtils.getClassNameFromFullName(fullClassName);
-
-                                        if (StringUtils.isNullOrEmpty(packageName)) {
-                                            if (-1 == missingClassErrors.indexOf(className)) {
-                                                missingClassErrors.add(className);
-                                            }
-                                        }
-                                        else {
-                                            AbstractMap.SimpleEntry<String, String> classWithPackage = new SimpleEntry<String, String>(
-                                                    className, packageName);
-
-                                            if (-1 == missingClassWithPackageErrors.indexOf(classWithPackage)) {
-                                                missingClassWithPackageErrors.add(classWithPackage);
-                                            }
-                                        }
-                                    }
-                                }
+                                line = compilationErrorCannotFindMethodInInterface(missingClassErrors,
+                                        missingClassWithPackageErrors, br, line);
                             }
                         }
 
-                        // Example of situation
-                        // [ERROR] /C:/test/src/TestClass.java:7: cannot access
-                        // com.test.second.third.servlet.RequestSupport
-                        // class file for com.test.second.third.servlet.RequestSupport not found
-                        if (line.contains(CompilationConstants.CANNOT_ACCESS_ERROR)) {
-                            line = br.readLine();
-                            if (line.startsWith(CompilationConstants.CANNOT_ACCESS_ERROR_PREFIX)
-                                    && line.endsWith(CompilationConstants.CANNOT_ACCESS_ERROR_SUFIX)) {
-
-                                String fullClassName = line.substring(
-                                        CompilationConstants.CANNOT_ACCESS_ERROR_PREFIX.length(),
-                                        line.length() - CompilationConstants.CANNOT_ACCESS_ERROR_SUFIX.length()).trim();
-                                lastDelimiterIndex = fullClassName.lastIndexOf('.');
-                                if (-1 < lastDelimiterIndex) {
-                                    AbstractMap.SimpleEntry<String, String> classWithPackage = new SimpleEntry<String, String>(
-                                            fullClassName.substring(lastDelimiterIndex + 1), fullClassName.substring(0,
-                                                    lastDelimiterIndex));
-                                    if (-1 == missingClassWithPackageErrors.indexOf(classWithPackage)) {
-                                        missingClassWithPackageErrors.add(classWithPackage);
-                                    }
-                                }
-                            }
-                        }
+                        line = compilationErrorCannotAccessClass(missingClassWithPackageErrors, br, line);
                     }
                 }
             }
         }
         catch (IOException e) {
             e.printStackTrace();
+        }
+        return result;
+    }
+
+    private static String compilationErrorCannotAccessClass(
+            List<SimpleEntry<String, String>> missingClassWithPackageErrors, BufferedReader br, String line)
+            throws IOException {
+        
+        int lastDelimiterIndex;
+        
+        // Example of situation
+        // [ERROR] /C:/test/src/TestClass.java:7: cannot access com.test.second.third.servlet.RequestSupport
+        // class file for com.test.second.third.servlet.RequestSupport not found
+        if (line.contains(CompilationConstants.CANNOT_ACCESS_ERROR)) {
+            line = br.readLine();
+            if (line.startsWith(CompilationConstants.CANNOT_ACCESS_ERROR_PREFIX)
+                    && line.endsWith(CompilationConstants.CANNOT_ACCESS_ERROR_SUFIX)) {
+
+                String fullClassName = line.substring(
+                        CompilationConstants.CANNOT_ACCESS_ERROR_PREFIX.length(),
+                        line.length() - CompilationConstants.CANNOT_ACCESS_ERROR_SUFIX.length()).trim();
+                lastDelimiterIndex = fullClassName.lastIndexOf('.');
+                if (-1 < lastDelimiterIndex) {
+                    AbstractMap.SimpleEntry<String, String> classWithPackage = new SimpleEntry<String, String>(
+                            fullClassName.substring(lastDelimiterIndex + 1), fullClassName.substring(0,
+                                    lastDelimiterIndex));
+                    if (-1 == missingClassWithPackageErrors.indexOf(classWithPackage)) {
+                        missingClassWithPackageErrors.add(classWithPackage);
+                    }
+                }
+            }
+        }
+        return line;
+    }
+
+    private static String compilationErrorCannotFindMethodInInterface(final List<String> missingClassErrors,
+            List<SimpleEntry<String, String>> missingClassWithPackageErrors, BufferedReader br, String line)
+            throws IOException {
+        
+        // [ERROR] /C:/test/src/TestClass.java:54: cannot find symbol
+        // symbol : method send(javax.jms.ObjectMessage)
+        // location: interface javax.jms.MessageProducer
+        if (line.startsWith(CompilationConstants.SYMBOL_METHOD_ERROR_PREFIX)) {
+            line = br.readLine();
+            if (line.startsWith(CompilationConstants.SYMBOL_LOCATION_INTERFACE_PREFIX)) {
+                String fullClassName = line.substring(
+                        CompilationConstants.SYMBOL_LOCATION_INTERFACE_PREFIX.length()).trim();
+
+                final String packageName = ClassUtils.getPackageFromFullName(fullClassName);
+                final String className = ClassUtils.getClassNameFromFullName(fullClassName);
+
+                if (StringUtils.isNullOrEmpty(packageName)) {
+                    if (-1 == missingClassErrors.indexOf(className)) {
+                        missingClassErrors.add(className);
+                    }
+                }
+                else {
+                    AbstractMap.SimpleEntry<String, String> classWithPackage = new SimpleEntry<String, String>(
+                            className, packageName);
+
+                    if (-1 == missingClassWithPackageErrors.indexOf(classWithPackage)) {
+                        missingClassWithPackageErrors.add(classWithPackage);
+                    }
+                }
+            }
+        }
+        return line;
+    }
+
+    private static String compilationErrorCannotFindClassWithPackage(final List<String> missingClassErrors,
+            List<SimpleEntry<String, String>> missingClassWithPackageErrors, BufferedReader br, String line)
+            throws IOException {
+        
+        // Example of situation
+        // [ERROR] /C:/test/src/TestClass.java:[5,29] : cannot find symbol
+        // symbol : class TestClass
+        // location: package com.test.second.third
+        if (line.startsWith(CompilationConstants.SYMBOL_CLASS_ERROR_PREFIX)) {
+            String className = line.substring(
+                    CompilationConstants.SYMBOL_CLASS_ERROR_PREFIX.length()).trim();
+            line = br.readLine();
+            if (line.startsWith(CompilationConstants.CLASS_LOCATION_PACKAGE_PREFIX)) {
+                String packageName = line.substring(
+                        CompilationConstants.CLASS_LOCATION_PACKAGE_PREFIX.length()).trim();
+
+                AbstractMap.SimpleEntry<String, String> classWithPackage = new SimpleEntry<String, String>(
+                        className, packageName);
+
+                if (-1 == missingClassWithPackageErrors.indexOf(classWithPackage)) {
+                    missingClassWithPackageErrors.add(classWithPackage);
+                }
+            }
+            else {
+                if (-1 == missingClassErrors.indexOf(className)) {
+                    missingClassErrors.add(className);
+                }
+            }
+        }
+        return line;
+    }
+
+    private static void compilationErrorCannotFindClass(final List<String> missingClassErrors, String line) {
+        // Example of situation
+        // [ERROR] /C:/test/src/TestClass.java:[42,36] : cannot find symbol
+        // symbol: class Action
+        if (line.startsWith(CompilationConstants.SYMBOL_ERROR_PREFIX)) {
+            String className = line
+                    .substring(CompilationConstants.SYMBOL_ERROR_PREFIX.length()).trim();
+            if (-1 == missingClassErrors.indexOf(className)) {
+                missingClassErrors.add(className);
+            }
+        }
+    }
+
+    private static boolean compilationErrorPackageDoesntExists(final List<String> missingPackageErrors, final String line) {
+        
+        boolean result = false;
+        
+        if (line.startsWith(CompilationConstants.PACKAGE_ERROR_PREFIX)
+                && line.endsWith(CompilationConstants.PACKAGE_ERROR_SUFIX)) {
+
+            result = true;
+            String packageName = line.substring(CompilationConstants.PACKAGE_ERROR_PREFIX.length(),
+                    line.length() - CompilationConstants.PACKAGE_ERROR_SUFIX.length()).trim();
+            if (-1 == missingPackageErrors.indexOf(packageName)) {
+                missingPackageErrors.add(packageName);
+            }
         }
         return result;
     }
