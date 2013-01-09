@@ -1,4 +1,5 @@
 #summary How to run instructions.
+#labels Featured,Phase-Deploy
 
 = How to run =
 
@@ -37,6 +38,8 @@ _Please note:
   # POM file will be fully overridden only dependencies section will remain
   # Sometimes it is not possible to resolve all dependencies correctly. Tool can continue processing the same packages and classes or found none to process. In this can human interaction is needed for recompilation and fixing current compilation issue. After this component can proceed resolving dependencies._
  
-To run aplication you can use following approach
+== To run application you can use following approach ==
 
-`mvn exec:java -Dexec.mainClass="org.pomizer.application.PomFromIndexCreator" -Dexec.args="c:\full_jars_index.dat c:\MyProject"`
+  * Download source code of the tool
+  * execute `mvn compile`
+  * execute `mvn exec:java -Dexec.mainClass="org.pomizer.application.PomFromIndexCreator" -Dexec.args="c:\full_jars_index.dat c:\MyProject"`
