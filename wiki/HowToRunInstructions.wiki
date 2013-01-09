@@ -1,5 +1,5 @@
 #summary How to run instructions.
-#labels Featured,Phase-Deploy
+#labels Phase-Deploy
 
 = How to run =
 
