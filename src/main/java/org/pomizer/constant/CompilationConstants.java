@@ -19,6 +19,10 @@ public class CompilationConstants {
     public static final String SYMBOL_METHOD_ERROR_PREFIX = "symbol  : method ";
 
     public static final String SYMBOL_LOCATION_INTERFACE_PREFIX = "location: interface ";
+    
+    public static final String SYMBOL_VARIABLE_ERROR_PREFIX = "symbol  : variable ";
+
+    public static final String SYMBOL_LOCATION_CLASS_PREFIX = "location: class ";
 
     public static final String CLASS_LOCATION_PACKAGE_PREFIX = "location: package ";
 

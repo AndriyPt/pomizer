@@ -134,6 +134,9 @@ public class MavenUtils {
 
                                 line = compilationErrorCannotFindMethodInInterface(missingClassErrors,
                                         missingClassWithPackageErrors, br, line);
+                                
+                                line = compilationErrorCannotFindVariableInClass(missingClassErrors,
+                                        missingClassWithPackageErrors, br, line);
                             }
                         }
 
@@ -178,6 +181,42 @@ public class MavenUtils {
         }
         return line;
     }
+    
+    //TODO: Remove code duplications. Update errors parsing algorithm
+    private static String compilationErrorCannotFindVariableInClass(final List<String> missingClassErrors,
+            List<SimpleEntry<String, String>> missingClassWithPackageErrors, BufferedReader br, String line)
+            throws IOException {
+        
+        // [ERROR] /C:/test/src/TestClass.java:54: cannot find symbol
+        // symbol  : variable TEST_12
+        // location: class com.test.second.third.SomeClass
+        if (line.startsWith(CompilationConstants.SYMBOL_VARIABLE_ERROR_PREFIX)) {
+            line = br.readLine();
+            if (line.startsWith(CompilationConstants.SYMBOL_LOCATION_CLASS_PREFIX)) {
+                String fullClassName = line.substring(
+                        CompilationConstants.SYMBOL_LOCATION_CLASS_PREFIX.length()).trim();
+
+                final String packageName = ClassUtils.getPackageFromFullName(fullClassName);
+                final String className = ClassUtils.getClassNameFromFullName(fullClassName);
+
+                if (StringUtils.isNullOrEmpty(packageName)) {
+                    if (-1 == missingClassErrors.indexOf(className)) {
+                        missingClassErrors.add(className);
+                    }
+                }
+                else {
+                    AbstractMap.SimpleEntry<String, String> classWithPackage = new SimpleEntry<String, String>(
+                            className, packageName);
+
+                    if (-1 == missingClassWithPackageErrors.indexOf(classWithPackage)) {
+                        missingClassWithPackageErrors.add(classWithPackage);
+                    }
+                }
+            }
+        }
+        return line;
+    }
+    
 
     private static String compilationErrorCannotFindMethodInInterface(final List<String> missingClassErrors,
             List<SimpleEntry<String, String>> missingClassWithPackageErrors, BufferedReader br, String line)
