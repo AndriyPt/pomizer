@@ -41,5 +41,10 @@ _Please note:
 == To run application you can use following approach ==
 
   * Download source code of the tool
-  * execute `mvn compile`
-  * execute `mvn exec:java -Dexec.mainClass="org.pomizer.application.PomFromIndexCreator" -Dexec.args="c:\full_jars_index.dat c:\MyProject"`
+  * execute 
+
+`mvn compile`
+
+  * execute 
+
+`mvn exec:java -Dexec.mainClass="org.pomizer.application.PomFromIndexCreator" -Dexec.args="c:\full_jars_index.dat c:\MyProject"`
