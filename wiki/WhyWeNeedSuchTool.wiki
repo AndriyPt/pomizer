@@ -1,5 +1,5 @@
 #summary Why we need such tool.
-#labels Featured,Phase-Requirements
+#labels Phase-Requirements
 
 = Why we need such tool =
 
