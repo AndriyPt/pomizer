@@ -45,6 +45,6 @@ _Please note:
 
 `mvn compile`
 
-  * execute 
+  * run any from two components using command line similar to following
 
 `mvn exec:java -Dexec.mainClass="org.pomizer.application.PomFromIndexCreator" -Dexec.args="c:\full_jars_index.dat c:\MyProject"`
