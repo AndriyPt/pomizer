@@ -1,5 +1,5 @@
 #summary How it works.
-#labels Featured,Phase-Design
+#labels Phase-Design
 
 = How it works =
 
