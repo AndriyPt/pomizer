@@ -12,7 +12,7 @@ _*Note:* mvn should also be in the search path of the OS which you are using._
 == General information == 
 Tool is build from two components.
 
-*First component* `org.pomizer.application.JarIndexer` is used for index creation of all JAR files in the list of folders. Command line parameters for this component are (keep this order):
+*First component* `org.pomizer.application.JarIndexer` is used for index creation of all JAR files in the list of folders. Command line parameters for this component are (please keep this order):
 
 `<version> <base path 1> [<base path 2> ... [<base path N>]]`
 
@@ -22,7 +22,7 @@ Tool is build from two components.
 
 As the result component will produce index called full_jars_index.dat in the current directory.
 
-*Second component* `org.pomizer.application.PomFromIndexCreator` is used to generate POM file using Maven and index file. Command line parameters for this component are (keep this order):
+*Second component* `org.pomizer.application.PomFromIndexCreator` is used to generate POM file using Maven and index file. Command line parameters for this component are (please keep this order):
 
 `<index file> <project directory> [<sources relative path, default "src">]`
 
