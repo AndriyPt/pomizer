@@ -4,7 +4,7 @@ public class ClassInfo implements Comparable<ClassInfo> {
 
     public String name;
 
-    public int jarFileIndex;
+    public int[] jarFileIndeces;
 
     public int packageIndex;
 

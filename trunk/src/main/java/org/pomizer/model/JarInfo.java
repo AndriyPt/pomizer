@@ -5,7 +5,7 @@ public class JarInfo implements Comparable<JarInfo> {
     public String name;
 
     public int basePathIndex;
-
+    
     public JarInfo(final String name, final int basePathIndex) {
         this.name = name;
         this.basePathIndex = basePathIndex;
@@ -15,7 +15,6 @@ public class JarInfo implements Comparable<JarInfo> {
 
         if (null == value) {
             return -1;
-
         }
 
         if (null == this.name) {

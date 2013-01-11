@@ -114,7 +114,7 @@ public class PomFromIndexCreator {
                 missingClassErrors.add(missingPackageErrors.get(j));
             }
             else {
-                int packageJarIndex = indeces.packageNamesJarIndex[packageIndex];
+                int packageJarIndex = indeces.packageNamesJarIndeces[packageIndex][0];
                 JarInfo newJarDependecy = new JarInfo(indeces.jarNames[packageJarIndex],
                         indeces.jarNamesBasePathIndex[packageJarIndex]);
 
@@ -184,7 +184,8 @@ public class PomFromIndexCreator {
     private static void addClassDependency(final IndexInfo indeces, final List<JarInfo> newJarDependencies,
             final int position) {
 
-        int classJarIndex = indeces.classNamesJarIndex[position];
+        //TODO: Add here more logic for JARs selecting in case if package is not still found
+        int classJarIndex = indeces.classNamesJarIndeces[position][0];
         JarInfo newJarDependecy = new JarInfo(indeces.jarNames[classJarIndex],
                 indeces.jarNamesBasePathIndex[classJarIndex]);
 
@@ -206,63 +207,13 @@ public class PomFromIndexCreator {
                     Integer.parseInt(bufferedReader.readLine()), Integer.parseInt(bufferedReader.readLine()),
                     Integer.parseInt(bufferedReader.readLine()));
 
-            String line;
-            for (int i = 0; i < indeces.basePathsCount; i++) {
-                line = bufferedReader.readLine();
-                if (null == line) {
-                    throw new Exception("Could not read all base paths. Finished on index " + i + " of "
-                            + indeces.packagesCount);
-                }
-                indeces.basePaths[i] = line.trim();
-            }
+            loadBasePathsIndex(indeces, bufferedReader);
 
-            for (int i = 0; i < indeces.jarsCount; i++) {
-                line = bufferedReader.readLine();
-                if (null == line) {
-                    throw new Exception("Could not read all jars. Finished on index " + i + " of " + indeces.jarsCount);
-                }
-                String[] values = line.trim().split(Pattern.quote(JarIndexRenderer.VALUES_DELIMITER));
-                if (values.length <= 1) {
-                    throw new Exception("Jar without base path index. Finished on index " + i + " of "
-                            + indeces.jarsCount);
-                }
+            loadJarsIndex(indeces, bufferedReader);
 
-                indeces.jarNames[i] = values[0];
-                indeces.jarNamesBasePathIndex[i] = Integer.parseInt(values[1]);
-            }
+            loadPackagesIndex(indeces, bufferedReader);
 
-            for (int i = 0; i < indeces.packagesCount; i++) {
-                line = bufferedReader.readLine();
-                if (null == line) {
-                    throw new Exception("Could not read all packages. Finished on index " + i + " of "
-                            + indeces.packagesCount);
-                }
-                String[] values = line.trim().split(Pattern.quote(JarIndexRenderer.VALUES_DELIMITER));
-                if (values.length <= 1) {
-                    throw new Exception("Package without jar file index. Finished on index " + i + " of "
-                            + indeces.packagesCount);
-                }
-
-                indeces.packageNames[i] = values[0];
-                indeces.packageNamesJarIndex[i] = Integer.parseInt(values[1]);
-            }
-
-            for (int i = 0; i < indeces.classesCount; i++) {
-                line = bufferedReader.readLine();
-                if (null == line) {
-                    throw new Exception("Could not read all classes. Finished on index " + i + " of "
-                            + indeces.classesCount);
-                }
-                String[] values = line.trim().split(Pattern.quote(JarIndexRenderer.VALUES_DELIMITER));
-                if (values.length <= 2) {
-                    throw new Exception("Class without all indeces. Finished on index " + i + " of "
-                            + indeces.classesCount);
-                }
-
-                indeces.classNames[i] = values[0];
-                indeces.classNamesJarIndex[i] = Integer.parseInt(values[1]);
-                indeces.classNamesPackageIndex[i] = Integer.parseInt(values[2]);
-            }
+            loadClassesIndex(indeces, bufferedReader);
         }
         catch (Exception e) {
             e.printStackTrace();
@@ -279,5 +230,82 @@ public class PomFromIndexCreator {
             }
         }
         return indeces;
+    }
+
+    private static void loadBasePathsIndex(final IndexInfo indeces, final BufferedReader bufferedReader) throws IOException, Exception {
+        String line;
+        for (int i = 0; i < indeces.basePathsCount; i++) {
+            line = bufferedReader.readLine();
+            if (null == line) {
+                throw new Exception("Could not read all base paths. Finished on index " + i + " of "
+                        + indeces.packagesCount);
+            }
+            indeces.basePaths[i] = line.trim();
+        }
+    }
+
+    private static void loadJarsIndex(final IndexInfo indeces, final BufferedReader bufferedReader) throws IOException, Exception {
+        String line;
+        for (int i = 0; i < indeces.jarsCount; i++) {
+            line = bufferedReader.readLine();
+            if (null == line) {
+                throw new Exception("Could not read all jars. Finished on index " + i + " of " + indeces.jarsCount);
+            }
+            String[] values = line.trim().split(Pattern.quote(JarIndexRenderer.VALUES_DELIMITER));
+            if (values.length <= 1) {
+                throw new Exception("Jar without base path index. Finished on index " + i + " of "
+                        + indeces.jarsCount);
+            }
+
+            indeces.jarNames[i] = values[0];
+            indeces.jarNamesBasePathIndex[i] = Integer.parseInt(values[1]);
+        }
+    }
+
+    private static void loadClassesIndex(final IndexInfo indeces, final BufferedReader bufferedReader) throws IOException, Exception {
+        String line;
+        for (int i = 0; i < indeces.classesCount; i++) {
+            line = bufferedReader.readLine();
+            if (null == line) {
+                throw new Exception("Could not read all classes. Finished on index " + i + " of "
+                        + indeces.classesCount);
+            }
+            String[] values = line.trim().split(Pattern.quote(JarIndexRenderer.VALUES_DELIMITER));
+            if (values.length <= 2) {
+                throw new Exception("Class without all indeces. Finished on index " + i + " of "
+                        + indeces.classesCount);
+            }
+
+            indeces.classNames[i] = values[0];
+            indeces.classNamesPackageIndex[i] = Integer.parseInt(values[1]);
+            
+            
+            indeces.classNamesJarIndeces[i] = new int[values.length - 2];
+            for (int j = 0; j < values.length - 2; j++) {
+                indeces.classNamesJarIndeces[i][j] = Integer.parseInt(values[j + 2]);
+            }
+        }
+    }
+
+    private static void loadPackagesIndex(final IndexInfo indeces, final BufferedReader bufferedReader) throws IOException, Exception {
+        String line;
+        for (int i = 0; i < indeces.packagesCount; i++) {
+            line = bufferedReader.readLine();
+            if (null == line) {
+                throw new Exception("Could not read all packages. Finished on index " + i + " of "
+                        + indeces.packagesCount);
+            }
+            String[] values = line.trim().split(Pattern.quote(JarIndexRenderer.VALUES_DELIMITER));
+            if (values.length <= 1) {
+                throw new Exception("Package without jar file index. Finished on index " + i + " of "
+                        + indeces.packagesCount);
+            }
+
+            indeces.packageNames[i] = values[0];
+            indeces.packageNamesJarIndeces[i] = new int[values.length - 1];
+            for (int j = 0; j < values.length - 1; j++) {
+                indeces.packageNamesJarIndeces[i][j] = Integer.parseInt(values[j + 1]);
+            }
+        }
     }
 }

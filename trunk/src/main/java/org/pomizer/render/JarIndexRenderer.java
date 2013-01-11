@@ -8,6 +8,7 @@ import org.pomizer.model.ClassInfo;
 import org.pomizer.model.JarInfo;
 import org.pomizer.model.PackageInfo;
 import org.pomizer.model.RawClassInfo;
+import org.pomizer.model.RawJarInfo;
 
 public class JarIndexRenderer {
 
@@ -30,7 +31,7 @@ public class JarIndexRenderer {
         }
     }
 
-    public static void writeJarFiles(final FileWriter fileWritter, final List<JarInfo> jarNames) throws IOException {
+    public static void writeJarFiles(final FileWriter fileWritter, final List<RawJarInfo> jarNames) throws IOException {
 
         for (JarInfo jarInfo : jarNames) {
             fileWritter.write(jarInfo.name + VALUES_DELIMITER + jarInfo.basePathIndex + '\n');
@@ -54,8 +55,13 @@ public class JarIndexRenderer {
             throws IOException {
 
         for (ClassInfo classInfo : classNames) {
-            fileWritter.write(classInfo.name + VALUES_DELIMITER + classInfo.jarFileIndex + VALUES_DELIMITER
-                    + classInfo.packageIndex + '\n');
+            String line = classInfo.name + VALUES_DELIMITER + classInfo.packageIndex;
+            
+            for (int i = 0; i < classInfo.jarFileIndeces.length; i++) {
+                line += VALUES_DELIMITER + classInfo.jarFileIndeces[i]; 
+            }
+            
+            fileWritter.write(line + '\n');
         }
     }
 }
