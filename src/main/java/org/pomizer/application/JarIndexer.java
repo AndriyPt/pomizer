@@ -12,10 +12,12 @@ import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 
 import org.apache.commons.io.FileUtils;
+import org.pomizer.comparator.JarIndexComparator;
+import org.pomizer.comparator.RawClassInfoComparator;
 import org.pomizer.constant.GlobalSettings;
-import org.pomizer.model.JarInfo;
 import org.pomizer.model.PackageInfo;
 import org.pomizer.model.RawClassInfo;
+import org.pomizer.model.RawJarInfo;
 import org.pomizer.render.JarIndexRenderer;
 import org.pomizer.util.ClassUtils;
 import org.pomizer.util.JavaUtils;
@@ -49,7 +51,7 @@ public class JarIndexer {
 
     private static void processJarDirectory(final String version, final List<String> basePaths) {
 
-        List<JarInfo> jarNames = new ArrayList<JarInfo>();
+        List<RawJarInfo> jarNames = new ArrayList<RawJarInfo>();
         List<PackageInfo> packageNames = new ArrayList<PackageInfo>();
         List<RawClassInfo> classNames = new ArrayList<RawClassInfo>();
 
@@ -81,7 +83,7 @@ public class JarIndexer {
         }
     }
 
-    private static void saveIndeces(final String version, final List<String> basePaths, final List<JarInfo> jarNames,
+    private static void saveIndeces(final String version, final List<String> basePaths, final List<RawJarInfo> jarNames,
             final List<PackageInfo> packageNames, final List<RawClassInfo> classNames) throws IOException {
 
         JavaUtils.printToConsole("Saving index to file ...");
@@ -108,38 +110,80 @@ public class JarIndexer {
         }
     }
 
-    private static void sortIndeces(List<JarInfo> jarNames, List<PackageInfo> packageNames,
-            List<RawClassInfo> classNames) throws Exception {
+    private static void sortIndeces(final List<RawJarInfo> jarNames, final List<PackageInfo> packageNames,
+            final List<RawClassInfo> classNames) throws Exception {
         JavaUtils.printToConsole("Sorting indeces ...");
+        
+        RawClassInfoComparator rawClassInfoComparator = new RawClassInfoComparator();
+        
         Collections.sort(jarNames);
         Collections.sort(packageNames);
-        Collections.sort(classNames);
-
+        Collections.sort(classNames, rawClassInfoComparator);
+        
         JavaUtils.printToConsole("Calculating index information ...");
+        int classListLength = classNames.size();
+        for (int i = 0; i < classListLength; i++) {
+            RawClassInfo classInfo = classNames.get(i);
+            int j = i + 1; 
+            while ((j < classListLength) && (0 == rawClassInfoComparator.compare(classInfo, classNames.get(j)))) {
+                RawClassInfo classInfoToMerge = classNames.get(j);
+                for (int k = 0; k < classInfoToMerge.jarInfoList.size(); k++) {
+                    if (-1 == classInfo.jarInfoList.indexOf(classInfoToMerge.jarInfoList.get(k))) {
+                        classInfo.jarInfoList.add(classInfoToMerge.jarInfoList.get(k));
+                    }
+                }
+                classNames.remove(j);
+                classListLength--;
+            }
+        }
+
+        adjustSortedIndeces(jarNames, packageNames, classNames);
+    }
+
+    private static void adjustSortedIndeces(final List<RawJarInfo> jarNames, final List<PackageInfo> packageNames,
+            final List<RawClassInfo> classNames) throws Exception {
+        
+        JarIndexComparator jarIndexComparator = new JarIndexComparator(jarNames);
         for (int i = 0; i < classNames.size(); i++) {
             RawClassInfo classInfo = classNames.get(i);
-            int jarIndex = Collections.binarySearch(jarNames, classInfo.jarInfo);
-            if (jarIndex < 0) {
-                throw new Exception("Unknown jar \"" + classInfo.jarInfo.name + "\" for class \"" + classInfo.name
-                        + "\"");
+            
+            List<Integer> jarFileIndeces = new ArrayList<Integer>();
+            for (int j = 0; j < classInfo.jarInfoList.size(); j++) {
+                int jarIndex = Collections.binarySearch(jarNames, classInfo.jarInfoList.get(j));
+                if (jarIndex < 0) {
+                    throw new Exception("Unknown jar \"" + classInfo.jarInfoList.get(j).name + "\" for class \"" + classInfo.name
+                            + "\"");
+                }
+                jarFileIndeces.add(jarIndex);
             }
-            classInfo.jarFileIndex = jarIndex;
-
+            Collections.sort(jarFileIndeces, jarIndexComparator);
+            classInfo.jarFileIndeces = new int[jarFileIndeces.size()];
+            for (int j = 0; j < jarFileIndeces.size(); j++) {
+                classInfo.jarFileIndeces[j] = jarFileIndeces.get(j);
+            }
+                
             int packageIndex = Collections.binarySearch(packageNames, classInfo.packageInfo);
             if (packageIndex < 0) {
                 throw new Exception("Unknown package \"" + classInfo.packageInfo.name + "\" for class \""
                         + classInfo.name + "\"");
             }
             classInfo.packageIndex = packageIndex;
+            
             List<Integer> packageJarIndeces = packageNames.get(packageIndex).jarIndeces;
-            if (-1 == packageJarIndeces.indexOf(jarIndex)) {
-                packageJarIndeces.add(jarIndex);
+            for (int j = 0; j < jarFileIndeces.size(); j++) {
+                if (-1 == packageJarIndeces.indexOf(jarFileIndeces.get(j))) {
+                    packageJarIndeces.add(jarFileIndeces.get(j));
+                }
             }
+        }
+
+        for (int i = 0; i < packageNames.size(); i++) {
+            Collections.sort(packageNames.get(i).jarIndeces, jarIndexComparator);
         }
     }
 
     private static void processClasses(final String basePath, final int basePathIndex, Collection<File> jarFiles,
-            List<JarInfo> jarNames, List<PackageInfo> packageNames, List<RawClassInfo> classNames) throws IOException {
+            List<RawJarInfo> jarNames, List<PackageInfo> packageNames, List<RawClassInfo> classNames) throws IOException {
         final String CLASS_EXTENSION = ".class";
 
         int basePathLength = basePath.length();
@@ -148,7 +192,8 @@ public class JarIndexer {
 
             String relativeJarFileName = foundFile.getAbsolutePath().substring(basePathLength);
             if (!JavaUtils.containsDirectoriesInPath(relativeJarFileName, "JRE", "JRE64", "TMP")) {
-                JarInfo currentJarInfo = new JarInfo(relativeJarFileName, basePathIndex);
+                RawJarInfo currentJarInfo = new RawJarInfo(relativeJarFileName, basePathIndex, 
+                        foundFile.lastModified());
                 jarNames.add(currentJarInfo);
 
                 JarFile jarFile = new JarFile(foundFile);
@@ -181,7 +226,7 @@ public class JarIndexer {
 
                             RawClassInfo classInfo = new RawClassInfo();
                             classInfo.name = className;
-                            classInfo.jarInfo = currentJarInfo;
+                            classInfo.jarInfoList.add(currentJarInfo);
                             classInfo.packageInfo = packageInfo;
                             classNames.add(classInfo);
                         }

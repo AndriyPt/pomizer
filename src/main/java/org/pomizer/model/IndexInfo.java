@@ -14,10 +14,10 @@ public class IndexInfo {
     public int[] jarNamesBasePathIndex;
 
     public String[] packageNames;
-    public int[] packageNamesJarIndex;
+    public int[][] packageNamesJarIndeces;
 
     public String[] classNames;
-    public int[] classNamesJarIndex;
+    public int[][] classNamesJarIndeces;
     public int[] classNamesPackageIndex;
 
     public IndexInfo(final String version, final int basePathsCount, final int jarsCount, final int packagesCount,
@@ -36,10 +36,10 @@ public class IndexInfo {
         this.jarNamesBasePathIndex = new int[jarsCount];
 
         this.packageNames = new String[packagesCount];
-        this.packageNamesJarIndex = new int[packagesCount];
+        this.packageNamesJarIndeces = new int[packagesCount][];
 
         this.classNames = new String[classesCount];
-        this.classNamesJarIndex = new int[classesCount];
+        this.classNamesJarIndeces = new int[classesCount][];
         this.classNamesPackageIndex = new int[classesCount];
     }
 }
