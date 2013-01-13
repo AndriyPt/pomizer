@@ -135,6 +135,12 @@ public class MavenUtils {
                                 line = compilationErrorCannotFindMethodInInterface(missingClassErrors,
                                         missingClassWithPackageErrors, br, line);
                                 
+                                line = compilationErrorCannotFindMethodInClass(missingClassErrors,
+                                        missingClassWithPackageErrors, br, line);
+                                
+                                line = compilationErrorCannotFindVariableInInterface(missingClassErrors,
+                                        missingClassWithPackageErrors, br, line);
+                                
                                 line = compilationErrorCannotFindVariableInClass(missingClassErrors,
                                         missingClassWithPackageErrors, br, line);
                             }
@@ -182,19 +188,18 @@ public class MavenUtils {
         return line;
     }
     
-    //TODO: Remove code duplications. Update errors parsing algorithm
-    private static String compilationErrorCannotFindVariableInClass(final List<String> missingClassErrors,
-            List<SimpleEntry<String, String>> missingClassWithPackageErrors, BufferedReader br, String line)
-            throws IOException {
+    //TODO: Update errors parsing algorithm
+    private static String compilationErrorPatternParsing(final String missingErrorPrefix, final String locationPrefix, 
+            final List<String> missingClassErrors, List<SimpleEntry<String, String>> missingClassWithPackageErrors, 
+            BufferedReader br, String line) throws IOException {
         
         // [ERROR] /C:/test/src/TestClass.java:54: cannot find symbol
-        // symbol  : variable TEST_12
-        // location: class com.test.second.third.SomeClass
-        if (line.startsWith(CompilationConstants.SYMBOL_VARIABLE_ERROR_PREFIX)) {
+        // <missingErrorPrefix> <some text>
+        // <locationPrefix> com.test.second.third.SomeClass
+        if (line.startsWith(missingErrorPrefix)) {
             line = br.readLine();
-            if (line.startsWith(CompilationConstants.SYMBOL_LOCATION_CLASS_PREFIX)) {
-                String fullClassName = line.substring(
-                        CompilationConstants.SYMBOL_LOCATION_CLASS_PREFIX.length()).trim();
+            if (line.startsWith(locationPrefix)) {
+                String fullClassName = line.substring(locationPrefix.length()).trim();
 
                 final String packageName = ClassUtils.getPackageFromFullName(fullClassName);
                 final String className = ClassUtils.getClassNameFromFullName(fullClassName);
@@ -217,6 +222,30 @@ public class MavenUtils {
         return line;
     }
     
+    private static String compilationErrorCannotFindVariableInInterface(final List<String> missingClassErrors,
+            List<SimpleEntry<String, String>> missingClassWithPackageErrors, BufferedReader br, String line)
+            throws IOException {
+        
+        // [ERROR] /C:/test/src/TestClass.java:54: cannot find symbol
+        // symbol  : variable TEST_12
+        // location: interface com.test.second.third.SomeInterface
+        return compilationErrorPatternParsing(CompilationConstants.SYMBOL_VARIABLE_ERROR_PREFIX, 
+                CompilationConstants.SYMBOL_LOCATION_INTERFACE_PREFIX, missingClassErrors, 
+                missingClassWithPackageErrors, br, line);
+    }
+    
+    private static String compilationErrorCannotFindVariableInClass(final List<String> missingClassErrors,
+            List<SimpleEntry<String, String>> missingClassWithPackageErrors, BufferedReader br, String line)
+            throws IOException {
+        
+        // [ERROR] /C:/test/src/TestClass.java:54: cannot find symbol
+        // symbol  : variable TEST_12
+        // location: class com.test.second.third.SomeClass
+        return compilationErrorPatternParsing(CompilationConstants.SYMBOL_VARIABLE_ERROR_PREFIX, 
+                CompilationConstants.SYMBOL_LOCATION_CLASS_PREFIX, missingClassErrors, 
+                missingClassWithPackageErrors, br, line);
+    }
+    
 
     private static String compilationErrorCannotFindMethodInInterface(final List<String> missingClassErrors,
             List<SimpleEntry<String, String>> missingClassWithPackageErrors, BufferedReader br, String line)
@@ -225,31 +254,21 @@ public class MavenUtils {
         // [ERROR] /C:/test/src/TestClass.java:54: cannot find symbol
         // symbol : method send(javax.jms.ObjectMessage)
         // location: interface javax.jms.MessageProducer
-        if (line.startsWith(CompilationConstants.SYMBOL_METHOD_ERROR_PREFIX)) {
-            line = br.readLine();
-            if (line.startsWith(CompilationConstants.SYMBOL_LOCATION_INTERFACE_PREFIX)) {
-                String fullClassName = line.substring(
-                        CompilationConstants.SYMBOL_LOCATION_INTERFACE_PREFIX.length()).trim();
-
-                final String packageName = ClassUtils.getPackageFromFullName(fullClassName);
-                final String className = ClassUtils.getClassNameFromFullName(fullClassName);
-
-                if (StringUtils.isNullOrEmpty(packageName)) {
-                    if (-1 == missingClassErrors.indexOf(className)) {
-                        missingClassErrors.add(className);
-                    }
-                }
-                else {
-                    AbstractMap.SimpleEntry<String, String> classWithPackage = new SimpleEntry<String, String>(
-                            className, packageName);
-
-                    if (-1 == missingClassWithPackageErrors.indexOf(classWithPackage)) {
-                        missingClassWithPackageErrors.add(classWithPackage);
-                    }
-                }
-            }
-        }
-        return line;
+        return compilationErrorPatternParsing(CompilationConstants.SYMBOL_METHOD_ERROR_PREFIX, 
+                CompilationConstants.SYMBOL_LOCATION_INTERFACE_PREFIX, missingClassErrors, 
+                missingClassWithPackageErrors, br, line);
+    }
+    
+    private static String compilationErrorCannotFindMethodInClass(final List<String> missingClassErrors,
+            List<SimpleEntry<String, String>> missingClassWithPackageErrors, BufferedReader br, String line)
+            throws IOException {
+        
+        // [ERROR] /C:/test/src/TestClass.java:54: cannot find symbol
+        //symbol  : method send(javax.jms.ObjectMessage)
+        //location: class javax.jms.MessageProducer
+        return compilationErrorPatternParsing(CompilationConstants.SYMBOL_METHOD_ERROR_PREFIX, 
+                CompilationConstants.SYMBOL_LOCATION_CLASS_PREFIX, missingClassErrors, 
+                missingClassWithPackageErrors, br, line);
     }
 
     private static String compilationErrorCannotFindClassWithPackage(final List<String> missingClassErrors,
