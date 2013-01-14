@@ -5,7 +5,6 @@ import java.io.IOException;
 import java.util.List;
 
 import org.pomizer.model.ClassInfo;
-import org.pomizer.model.JarInfo;
 import org.pomizer.model.PackageInfo;
 import org.pomizer.model.RawClassInfo;
 import org.pomizer.model.RawJarInfo;
@@ -33,7 +32,7 @@ public class JarIndexRenderer {
 
     public static void writeJarFiles(final FileWriter fileWritter, final List<RawJarInfo> jarNames) throws IOException {
 
-        for (JarInfo jarInfo : jarNames) {
+        for (RawJarInfo jarInfo : jarNames) {
             fileWritter.write(jarInfo.name + VALUES_DELIMITER + jarInfo.basePathIndex + '\n');
         }
     }

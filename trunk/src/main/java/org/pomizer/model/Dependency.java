@@ -9,6 +9,8 @@ public class Dependency {
     public String artifactId;
 
     public String version;
+    
+    public int jarIndex = -1;
 
     @Override
     public boolean equals(final Object object) {

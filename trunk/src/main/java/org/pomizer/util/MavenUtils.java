@@ -118,6 +118,7 @@ public class MavenUtils {
                     result = false;
                 }
 
+                //TODO: Add logic here to read all errors line till next error or end of section
                 if (line.startsWith(CompilationConstants.ERROR_PREFIX)) {
                     int lastDelimiterIndex = line.lastIndexOf(':');
                     line = line.substring(lastDelimiterIndex + 1).trim();
@@ -127,26 +128,33 @@ public class MavenUtils {
                             line = br.readLine();
                             if (null != line) {
 
+                                br.mark(5000);
                                 compilationErrorCannotFindClass(missingClassErrors, line);
+                                br.reset();
 
-                                line = compilationErrorCannotFindClassWithPackage(missingClassErrors,
+                                compilationErrorCannotFindClassWithPackage(missingClassErrors,
                                         missingClassWithPackageErrors, br, line);
+                                br.reset();
 
-                                line = compilationErrorCannotFindMethodInInterface(missingClassErrors,
+                                compilationErrorCannotFindMethodInInterface(missingClassErrors,
                                         missingClassWithPackageErrors, br, line);
+                                br.reset();
                                 
-                                line = compilationErrorCannotFindMethodInClass(missingClassErrors,
+                                compilationErrorCannotFindMethodInClass(missingClassErrors,
                                         missingClassWithPackageErrors, br, line);
+                                br.reset();
                                 
-                                line = compilationErrorCannotFindVariableInInterface(missingClassErrors,
+                                compilationErrorCannotFindVariableInInterface(missingClassErrors,
                                         missingClassWithPackageErrors, br, line);
+                                br.reset();
                                 
-                                line = compilationErrorCannotFindVariableInClass(missingClassErrors,
+                                compilationErrorCannotFindVariableInClass(missingClassErrors,
                                         missingClassWithPackageErrors, br, line);
+                                br.reset();
                             }
                         }
 
-                        line = compilationErrorCannotAccessClass(missingClassWithPackageErrors, br, line);
+                        compilationErrorCannotAccessClass(missingClassWithPackageErrors, br, line);
                     }
                 }
             }
@@ -332,6 +340,25 @@ public class MavenUtils {
         }
         return result;
     }
+    
+    public static Dependency createDependecy(final String basePath, final String relativeFileName, final String version) {
+
+        Dependency result = null;
+        
+        File jarFilePath = new File(basePath, relativeFileName);
+        
+        String groupId = MANUAL_GROUP_ID + "." + StringUtils.convertPathToObjectName(jarFilePath.getParent());
+        String fileName = jarFilePath.getName();
+        fileName = fileName.substring(0, fileName.length() - ".jar".length());
+        String artifactId = fileName;
+        
+        result = new Dependency();
+        result.groupId = groupId;
+        result.artifactId = artifactId;
+        result.version = version;
+        
+        return result;
+    }
 
     public static Dependency installJarFile(final String version, final String basePath, final String relativeFileName)
             throws Exception {
@@ -343,16 +370,13 @@ public class MavenUtils {
         if (!jarFilePath.exists()) {
             throw new Exception("Jar file \"" + jarFilePath.getAbsolutePath() + "\" doesn\'t exist");
         }
-
-        String groupId = MANUAL_GROUP_ID + "." + StringUtils.convertPathToObjectName(jarFilePath.getParent());
-        String fileName = jarFilePath.getName();
-        fileName = fileName.substring(0, fileName.length() - ".jar".length());
-        String artifactId = fileName;
+        
+        result = createDependecy(basePath, relativeFileName, version);
 
         String commandLine = buildMavenCommandLine(
                 "install:install-file",
                 String.format("-Dfile=\"%s\" -DgroupId=%s -DartifactId=%s -Dversion=%s -Dpackaging=jar",
-                        jarFilePath.getAbsolutePath(), groupId, artifactId, version));
+                        jarFilePath.getAbsolutePath(), result.groupId, result.artifactId, result.version));
 
         Runtime runtime = Runtime.getRuntime();
         Process proc;
@@ -377,10 +401,6 @@ public class MavenUtils {
             throw new Exception("Installation of \"" + jarFilePath.getAbsolutePath() + "\" failed");
         }
 
-        result = new Dependency();
-        result.groupId = groupId;
-        result.artifactId = artifactId;
-        result.version = version;
 
         return result;
     }

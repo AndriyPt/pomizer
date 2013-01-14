@@ -63,6 +63,7 @@ public class PomFromIndexCreator {
 
         JavaUtils.printToConsole("Parsing POM file...");
         MavenUtils.readPomDependencies(pomFileName, dependencies);
+        assignJarIndexToDependency(dependencies, indeces);
 
         final List<JarInfo> newJarDependencies = new ArrayList<JarInfo>();
         final List<String> missingPackageErrors = new ArrayList<String>();
@@ -82,6 +83,7 @@ public class PomFromIndexCreator {
                     Dependency newDependency = MavenUtils.installJarFile(indeces.version,
                             indeces.basePaths[newJarDependencies.get(j).basePathIndex], newJarDependencies.get(j).name);
                     if (-1 == dependencies.indexOf(newDependency)) {
+                        newDependency.jarIndex = newJarDependencies.get(j).index;
                         dependencies.add(newDependency);
                     }
                 }
@@ -101,6 +103,20 @@ public class PomFromIndexCreator {
         JavaUtils.printToConsole("Finished");
     }
 
+    private static void assignJarIndexToDependency(final List<Dependency> dependencies, final IndexInfo indeces) {
+        if (dependencies.size() > 0) {
+            for (int i = 0; i < indeces.jarNames.length; i++) {
+                int basePathIndex = indeces.jarNamesBasePathIndex[i]; 
+                Dependency jarDependency = MavenUtils.createDependecy(indeces.basePaths[basePathIndex], 
+                        indeces.jarNames[i], indeces.version);
+                int dependencyIndex = dependencies.indexOf(jarDependency);
+                if (-1 < dependencyIndex) {
+                    dependencies.get(dependencyIndex).jarIndex = i;
+                }
+            }
+        }
+    }
+
     private static void processMissingErrors(final IndexInfo indeces, final List<JarInfo> newJarDependencies,
             final List<String> missingPackageErrors,
             final List<SimpleEntry<String, String>> missingClassWithPackageErrors, final List<String> missingClassErrors)
@@ -116,7 +132,7 @@ public class PomFromIndexCreator {
             else {
                 int packageJarIndex = indeces.packageNamesJarIndeces[packageIndex][0];
                 JarInfo newJarDependecy = new JarInfo(indeces.jarNames[packageJarIndex],
-                        indeces.jarNamesBasePathIndex[packageJarIndex]);
+                        indeces.jarNamesBasePathIndex[packageJarIndex], packageJarIndex);
 
                 if (-1 == newJarDependencies.indexOf(newJarDependecy)) {
                     newJarDependencies.add(newJarDependecy);
@@ -187,7 +203,7 @@ public class PomFromIndexCreator {
         //TODO: Add here more logic for JARs selecting in case if package is not still found
         int classJarIndex = indeces.classNamesJarIndeces[position][0];
         JarInfo newJarDependecy = new JarInfo(indeces.jarNames[classJarIndex],
-                indeces.jarNamesBasePathIndex[classJarIndex]);
+                indeces.jarNamesBasePathIndex[classJarIndex], classJarIndex);
 
         if (-1 == newJarDependencies.indexOf(newJarDependecy)) {
             newJarDependencies.add(newJarDependecy);
