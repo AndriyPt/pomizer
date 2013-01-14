@@ -74,8 +74,8 @@ public class PomFromIndexCreator {
                     && !MavenUtils.compilePomFile(pomFileName, missingPackageErrors, missingClassErrors,
                             missingClassWithPackageErrors); i++) {
 
-                processMissingErrors(indeces, newJarDependencies, missingPackageErrors, missingClassWithPackageErrors,
-                        missingClassErrors);
+                processMissingErrors(indeces, dependencies, newJarDependencies, missingPackageErrors, 
+                        missingClassWithPackageErrors, missingClassErrors);
 
                 for (int j = 0; j < newJarDependencies.size(); j++) {
                     JavaUtils.printToConsole(String.format("Installing file \"%s\" to local repository...",
@@ -117,8 +117,8 @@ public class PomFromIndexCreator {
         }
     }
 
-    private static void processMissingErrors(final IndexInfo indeces, final List<JarInfo> newJarDependencies,
-            final List<String> missingPackageErrors,
+    private static void processMissingErrors(final IndexInfo indeces, final List<Dependency> dependencies, 
+            final List<JarInfo> newJarDependencies, final List<String> missingPackageErrors,
             final List<SimpleEntry<String, String>> missingClassWithPackageErrors, final List<String> missingClassErrors)
             throws Exception {
 
@@ -141,19 +141,19 @@ public class PomFromIndexCreator {
         }
 
         for (int j = 0; j < missingClassWithPackageErrors.size(); j++) {
-            processMissingClassErrors(indeces, missingClassWithPackageErrors.get(j).getKey(),
+            processMissingClassErrors(indeces, dependencies, missingClassWithPackageErrors.get(j).getKey(),
                     missingClassWithPackageErrors.get(j).getValue(), newJarDependencies);
         }
 
         if ((0 == missingPackageErrors.size()) && (0 == missingClassWithPackageErrors.size())) {
             for (int j = 0; j < missingClassErrors.size(); j++) {
-                processMissingClassErrors(indeces, missingClassErrors.get(j), null, newJarDependencies);
+                processMissingClassErrors(indeces, dependencies, missingClassErrors.get(j), null, newJarDependencies);
             }
         }
     }
 
-    private static void processMissingClassErrors(final IndexInfo indeces, final String className,
-            final String packageName, final List<JarInfo> newJarDependencies) throws Exception {
+    private static void processMissingClassErrors(final IndexInfo indeces, final List<Dependency> dependencies, 
+            final String className, final String packageName, final List<JarInfo> newJarDependencies) throws Exception {
 
         boolean matchPackage = false;
         if ((null != packageName) && (!packageName.isEmpty())) {
@@ -188,20 +188,58 @@ public class PomFromIndexCreator {
             if (matchPackage) {
                 int packageIndex = indeces.classNamesPackageIndex[k];
                 if (indeces.packageNames[packageIndex].equals(packageName)) {
-                    addClassDependency(indeces, newJarDependencies, k);
+                    addClassDependency(indeces, dependencies, newJarDependencies, k, true);
+                    break;
                 }
             }
             else {
-                addClassDependency(indeces, newJarDependencies, k);
+                addClassDependency(indeces, dependencies, newJarDependencies, k, false);
             }
         }
     }
 
-    private static void addClassDependency(final IndexInfo indeces, final List<JarInfo> newJarDependencies,
-            final int position) {
+    private static void addClassDependency(final IndexInfo indeces, final List<Dependency> dependencies, 
+            final List<JarInfo> newJarDependencies, final int position, final boolean isClassWithPackage) {
 
-        //TODO: Add here more logic for JARs selecting in case if package is not still found
-        int classJarIndex = indeces.classNamesJarIndeces[position][0];
+        int classJarIndex;
+        if (isClassWithPackage && (indeces.classNamesJarIndeces[position].length > 1)) {
+            
+            List<Integer> relatedIndeces = new ArrayList<Integer>();
+            int smallestIndex = indeces.classNamesJarIndeces[position].length;
+            for (int i = 0; i < dependencies.size(); i++) {
+                int dependecyJarIndex = dependencies.get(i).jarIndex; 
+                for (int j = 0; j < indeces.classNamesJarIndeces[position].length; j++) {
+                    if (indeces.classNamesJarIndeces[position][j] == dependecyJarIndex) {
+                        relatedIndeces.add(i);
+                        if (j < smallestIndex) {
+                            smallestIndex = j;
+                        }
+                        break;
+                    }
+                }
+            }
+            
+            if (relatedIndeces.size() > 0) {
+                for (int i = dependencies.size() - 1; i >= 0; i--) {
+                    if (relatedIndeces.indexOf(i) >= 0) {
+                        dependencies.remove(i);
+                    }
+                }
+                
+                if (smallestIndex < indeces.classNamesJarIndeces[position].length - 1) {
+                    classJarIndex = indeces.classNamesJarIndeces[position][smallestIndex + 1]; 
+                }
+                else {
+                    classJarIndex = indeces.classNamesJarIndeces[position][smallestIndex];
+                }
+            }
+            else {
+                classJarIndex = indeces.classNamesJarIndeces[position][0];
+            }
+        }
+        else {
+            classJarIndex = indeces.classNamesJarIndeces[position][0];
+        }
         JarInfo newJarDependecy = new JarInfo(indeces.jarNames[classJarIndex],
                 indeces.jarNamesBasePathIndex[classJarIndex], classJarIndex);
 
