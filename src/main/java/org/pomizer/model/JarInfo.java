@@ -6,9 +6,12 @@ public class JarInfo implements Comparable<JarInfo> {
 
     public int basePathIndex;
     
-    public JarInfo(final String name, final int basePathIndex) {
+    public int index;
+    
+    public JarInfo(final String name, final int basePathIndex, final int index) {
         this.name = name;
         this.basePathIndex = basePathIndex;
+        this.index = index;
     }
 
     public int compareTo(final JarInfo value) {
