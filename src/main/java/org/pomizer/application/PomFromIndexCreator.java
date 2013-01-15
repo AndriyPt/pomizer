@@ -236,6 +236,19 @@ public class PomFromIndexCreator {
             else {
                 classJarIndex = indeces.classNamesJarIndeces[position][0];
             }
+            
+            if (newJarDependencies.size() > 0) {
+                boolean foundAlreadyDetectedJar = false;
+                for (int j = 0; (j < indeces.classNamesJarIndeces[position].length) && !foundAlreadyDetectedJar; j++) {
+                    for (int k = 0; k < newJarDependencies.size(); k++) {
+                        if (newJarDependencies.get(k).index == indeces.classNamesJarIndeces[position][j]) {
+                            foundAlreadyDetectedJar = true;
+                            classJarIndex = indeces.classNamesJarIndeces[position][j];
+                            break;
+                        }
+                    }
+                }
+            }
         }
         else {
             classJarIndex = indeces.classNamesJarIndeces[position][0];
