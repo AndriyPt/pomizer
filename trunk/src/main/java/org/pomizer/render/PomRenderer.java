@@ -4,6 +4,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.List;
 
+import org.pomizer.constant.GlobalSettings;
 import org.pomizer.constant.XmlConstants;
 import org.pomizer.model.Dependency;
 
@@ -66,8 +67,8 @@ public class PomRenderer {
         fileWritter.write("        <artifactId>maven-compiler-plugin</artifactId>\n");
         fileWritter.write("        <version>3.0</version>\n");
         fileWritter.write("        <configuration>\n");
-        fileWritter.write("          <source>1.6</source>\n");
-        fileWritter.write("          <target>1.6</target>\n");
+        fileWritter.write("          <source>" + GlobalSettings.JAVA_VERSION + "</source>\n");
+        fileWritter.write("          <target>" + GlobalSettings.JAVA_VERSION + "</target>\n");
         fileWritter.write("        </configuration>\n");
         fileWritter.write("      </plugin>\n");
         fileWritter.write("    </plugins>\n");
