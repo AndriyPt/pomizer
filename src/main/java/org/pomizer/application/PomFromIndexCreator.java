@@ -201,7 +201,7 @@ public class PomFromIndexCreator {
                     addClassDependency(indeces, dependencies, newJarDependencies, k, false);
                 }
             }
-            if (!foundPackageWithClass) {
+            if (!foundPackageWithClass && matchPackage) {
                 JavaUtils.printToConsole("Error: Could not find jar for class: " + packageName + "." + className);
             }
         }
