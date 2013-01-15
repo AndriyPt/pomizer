@@ -201,44 +201,11 @@ public class PomFromIndexCreator {
     private static void addClassDependency(final IndexInfo indeces, final List<Dependency> dependencies, 
             final List<JarInfo> newJarDependencies, final int position, final boolean isClassWithPackage) {
 
-        int classJarIndex;
+        int classJarIndex = indeces.classNamesJarIndeces[position][0];
         if (isClassWithPackage && (indeces.classNamesJarIndeces[position].length > 1)) {
             
-            List<Integer> relatedIndeces = new ArrayList<Integer>();
-            int smallestIndex = indeces.classNamesJarIndeces[position].length;
-            for (int i = 0; i < dependencies.size(); i++) {
-                int dependecyJarIndex = dependencies.get(i).jarIndex; 
-                for (int j = 0; j < indeces.classNamesJarIndeces[position].length; j++) {
-                    if (indeces.classNamesJarIndeces[position][j] == dependecyJarIndex) {
-                        relatedIndeces.add(i);
-                        if (j < smallestIndex) {
-                            smallestIndex = j;
-                        }
-                        break;
-                    }
-                }
-            }
-            
-            if (relatedIndeces.size() > 0) {
-                for (int i = dependencies.size() - 1; i >= 0; i--) {
-                    if (relatedIndeces.indexOf(i) >= 0) {
-                        dependencies.remove(i);
-                    }
-                }
-                
-                if (smallestIndex < indeces.classNamesJarIndeces[position].length - 1) {
-                    classJarIndex = indeces.classNamesJarIndeces[position][smallestIndex + 1]; 
-                }
-                else {
-                    classJarIndex = indeces.classNamesJarIndeces[position][smallestIndex];
-                }
-            }
-            else {
-                classJarIndex = indeces.classNamesJarIndeces[position][0];
-            }
-            
+            boolean foundAlreadyDetectedJar = false;
             if (newJarDependencies.size() > 0) {
-                boolean foundAlreadyDetectedJar = false;
                 for (int j = 0; (j < indeces.classNamesJarIndeces[position].length) && !foundAlreadyDetectedJar; j++) {
                     for (int k = 0; k < newJarDependencies.size(); k++) {
                         if (newJarDependencies.get(k).index == indeces.classNamesJarIndeces[position][j]) {
@@ -249,9 +216,38 @@ public class PomFromIndexCreator {
                     }
                 }
             }
-        }
-        else {
-            classJarIndex = indeces.classNamesJarIndeces[position][0];
+            
+            if (!foundAlreadyDetectedJar) {
+                List<Integer> relatedIndeces = new ArrayList<Integer>();
+                int smallestIndex = indeces.classNamesJarIndeces[position].length;
+                for (int i = 0; i < dependencies.size(); i++) {
+                    int dependecyJarIndex = dependencies.get(i).jarIndex; 
+                    for (int j = 0; j < indeces.classNamesJarIndeces[position].length; j++) {
+                        if (indeces.classNamesJarIndeces[position][j] == dependecyJarIndex) {
+                            relatedIndeces.add(i);
+                            if (j < smallestIndex) {
+                                smallestIndex = j;
+                            }
+                            break;
+                        }
+                    }
+                }
+                
+                if (relatedIndeces.size() > 0) {
+                    for (int i = dependencies.size() - 1; i >= 0; i--) {
+                        if (relatedIndeces.indexOf(i) >= 0) {
+                            dependencies.remove(i);
+                        }
+                    }
+                    
+                    if (smallestIndex < indeces.classNamesJarIndeces[position].length - 1) {
+                        classJarIndex = indeces.classNamesJarIndeces[position][smallestIndex + 1]; 
+                    }
+                    else {
+                        classJarIndex = indeces.classNamesJarIndeces[position][0];
+                    }
+                }
+            }
         }
         JarInfo newJarDependecy = new JarInfo(indeces.jarNames[classJarIndex],
                 indeces.jarNamesBasePathIndex[classJarIndex], classJarIndex);
