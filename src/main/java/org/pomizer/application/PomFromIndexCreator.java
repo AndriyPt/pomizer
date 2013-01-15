@@ -122,12 +122,14 @@ public class PomFromIndexCreator {
             final List<SimpleEntry<String, String>> missingClassWithPackageErrors, final List<String> missingClassErrors)
             throws Exception {
 
+        int missingClassesMovedFromPackagesCount = 0;
         for (int j = 0; j < missingPackageErrors.size(); j++) {
             JavaUtils.printToConsole("Resolving package: " + missingPackageErrors.get(j) + "...");
             int packageIndex = Arrays.binarySearch(indeces.packageNames, missingPackageErrors.get(j));
             if (packageIndex < 0) {
                 // Move this package to class list in case if this is bad compiler assumption
                 missingClassErrors.add(missingPackageErrors.get(j));
+                missingClassesMovedFromPackagesCount++;
             }
             else {
                 int packageJarIndex = indeces.packageNamesJarIndeces[packageIndex][0];
@@ -145,7 +147,7 @@ public class PomFromIndexCreator {
                     missingClassWithPackageErrors.get(j).getValue(), newJarDependencies);
         }
 
-        if ((0 == missingPackageErrors.size()) && (0 == missingClassWithPackageErrors.size())) {
+        if ((missingClassesMovedFromPackagesCount == missingPackageErrors.size()) && (0 == missingClassWithPackageErrors.size())) {
             for (int j = 0; j < missingClassErrors.size(); j++) {
                 processMissingClassErrors(indeces, dependencies, missingClassErrors.get(j), null, newJarDependencies);
             }
@@ -169,31 +171,38 @@ public class PomFromIndexCreator {
 
         int classIndex = Arrays.binarySearch(indeces.classNames, className);
         if (classIndex < 0) {
-            throw new Exception("Could not find jar for class: " + className);
+            JavaUtils.printToConsole("Error: Could not find jar for class: " + className);
         }
-        int lowerClassIndex = classIndex;
-        while ((lowerClassIndex >= 0) && (indeces.classNames[lowerClassIndex].equals(className))) {
-            lowerClassIndex--;
-        }
-        lowerClassIndex++;
-
-        int upperClassIndex = classIndex;
-        while ((upperClassIndex < indeces.classesCount) && (indeces.classNames[upperClassIndex].equals(className))) {
-            upperClassIndex++;
-        }
-        upperClassIndex--;
-
-        for (int k = lowerClassIndex; k <= upperClassIndex; k++) {
-
-            if (matchPackage) {
-                int packageIndex = indeces.classNamesPackageIndex[k];
-                if (indeces.packageNames[packageIndex].equals(packageName)) {
-                    addClassDependency(indeces, dependencies, newJarDependencies, k, true);
-                    break;
+        else {
+            int lowerClassIndex = classIndex;
+            while ((lowerClassIndex >= 0) && (indeces.classNames[lowerClassIndex].equals(className))) {
+                lowerClassIndex--;
+            }
+            lowerClassIndex++;
+    
+            int upperClassIndex = classIndex;
+            while ((upperClassIndex < indeces.classesCount) && (indeces.classNames[upperClassIndex].equals(className))) {
+                upperClassIndex++;
+            }
+            upperClassIndex--;
+    
+            boolean foundPackageWithClass = false;
+            for (int k = lowerClassIndex; k <= upperClassIndex; k++) {
+    
+                if (matchPackage) {
+                    int packageIndex = indeces.classNamesPackageIndex[k];
+                    if (indeces.packageNames[packageIndex].equals(packageName)) {
+                        addClassDependency(indeces, dependencies, newJarDependencies, k, true);
+                        foundPackageWithClass = true;
+                        break;
+                    }
+                }
+                else {
+                    addClassDependency(indeces, dependencies, newJarDependencies, k, false);
                 }
             }
-            else {
-                addClassDependency(indeces, dependencies, newJarDependencies, k, false);
+            if (!foundPackageWithClass) {
+                JavaUtils.printToConsole("Error: Could not find jar for class: " + packageName + "." + className);
             }
         }
     }
