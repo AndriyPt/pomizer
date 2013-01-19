@@ -1,15 +1,17 @@
 package org.pomizer.util;
 
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.util.ArrayList;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.HashMap;
-import java.util.List;
 
 import org.dom4j.Document;
 import org.dom4j.DocumentException;
+import org.dom4j.Element;
 import org.dom4j.Node;
+import org.dom4j.io.OutputFormat;
 import org.dom4j.io.SAXReader;
+import org.dom4j.io.XMLWriter;
+import org.dom4j.tree.DefaultElement;
 import org.jaxen.JaxenException;
 import org.jaxen.SimpleNamespaceContext;
 import org.jaxen.XPath;
@@ -57,20 +59,6 @@ public class XmlUtils {
         return result;
     }
 
-    public static Document downloadMavenXml(final String urlToGo) throws DocumentException {
-
-        Document document = null;
-        try {
-            URL url = new URL(urlToGo);
-            SAXReader reader = new SAXReader();
-            document = reader.read(url);
-        }
-        catch (MalformedURLException e) {
-            e.printStackTrace();
-        }
-        return document;
-    }
-
     public static Dependency readDependencyFromXml(final Node node) {
         return readDependencyFromXml(node, false);
     }
@@ -84,31 +72,50 @@ public class XmlUtils {
         }
         return result;
     }
-
-    @SuppressWarnings("rawtypes")
-    public static List<Dependency> searchForAllDependecyArtifacts(final Document document) {
-
-        List<Dependency> result = new ArrayList<Dependency>();
-        if (null != document) {
-            List nodes = document.selectNodes("/searchNGResponse/data/artifact");
-            for (int i = 0; i < nodes.size(); i++) {
-                if (nodes.get(i) instanceof Node) {
-                    Dependency dependency = readDependencyFromXml((Node) nodes.get(i));
-                    boolean found = false;
-                    for (int j = 0; (j < result.size()) && !found; j++) {
-                        Dependency currentDependency = result.get(j);
-                        if (StringUtils.areEqual(currentDependency.groupId, dependency.groupId)
-                                && StringUtils.areEqual(currentDependency.artifactId, dependency.artifactId)) {
-                            found = true;
-                        }
-                    }
-
-                    if (!found) {
-                        result.add(dependency);
-                    }
+    
+    public static void addDependencyToXmlParent(final DefaultElement dependenciesNode, final Dependency dependency) {
+        
+        if (null != dependenciesNode) {
+            Element dependencyNode = dependenciesNode.addElement(XmlConstants.DEPENDENCY);
+            dependencyNode.addElement(XmlConstants.ARTIFACT_GROUP_ID).addText(dependency.groupId);
+            dependencyNode.addElement(XmlConstants.ARTIFACT_ID).addText(dependency.artifactId);
+            dependencyNode.addElement(XmlConstants.ARTIFACT_VERSION).addText(dependency.version);
+        }
+    }
+    
+    public static Document loadXmlDocument(final String xmlFileName) {
+        SAXReader reader = new SAXReader();
+        Document result = null;
+        try {
+            result = reader.read(xmlFileName);
+        }
+        catch (DocumentException e) {
+            e.printStackTrace();
+        }
+        return result;
+    }
+    
+    public static void saveXmlDocument(final Document xmlDocument, final String xmlFileName) {
+        
+        OutputFormat format = OutputFormat.createPrettyPrint();
+        XMLWriter writer = null; 
+        try {
+            writer = new XMLWriter(new FileWriter(xmlFileName), format);
+            writer.write(xmlDocument);
+        }
+        catch (IOException e) {
+            e.printStackTrace();
+        }
+        finally {
+            if (null != writer) {
+                try {
+                    writer.flush();
+                    writer.close();
+                }
+                catch (IOException e) {
+                    e.printStackTrace();
                 }
             }
         }
-        return result;
     }
 }

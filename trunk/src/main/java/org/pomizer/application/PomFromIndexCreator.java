@@ -11,6 +11,8 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.regex.Pattern;
 
+import org.dom4j.Document;
+import org.dom4j.tree.DefaultElement;
 import org.pomizer.constant.GlobalSettings;
 import org.pomizer.model.Dependency;
 import org.pomizer.model.IndexInfo;
@@ -18,6 +20,7 @@ import org.pomizer.model.JarInfo;
 import org.pomizer.render.JarIndexRenderer;
 import org.pomizer.util.JavaUtils;
 import org.pomizer.util.MavenUtils;
+import org.pomizer.util.XmlUtils;
 
 public class PomFromIndexCreator {
 
@@ -62,7 +65,8 @@ public class PomFromIndexCreator {
         }
 
         JavaUtils.printToConsole("Parsing POM file...");
-        MavenUtils.readPomDependencies(pomFileName, dependencies);
+        final Document pomDocument = XmlUtils.loadXmlDocument(pomFileName);
+        final DefaultElement dependenciesNode = MavenUtils.readPomDependencies(pomDocument, dependencies);
         assignJarIndexToDependency(dependencies, indeces);
 
         final List<JarInfo> newJarDependencies = new ArrayList<JarInfo>();
@@ -70,6 +74,7 @@ public class PomFromIndexCreator {
         final List<String> missingClassErrors = new ArrayList<String>();
         final List<AbstractMap.SimpleEntry<String, String>> missingClassWithPackageErrors = new ArrayList<AbstractMap.SimpleEntry<String, String>>();
         try {
+            MavenUtils.executeCleanTask(pomFileName);
             for (int i = 0; (i < MAX_ITERATIONS_COUNT)
                     && !MavenUtils.compilePomFile(pomFileName, missingPackageErrors, missingClassErrors,
                             missingClassWithPackageErrors); i++) {
@@ -92,9 +97,10 @@ public class PomFromIndexCreator {
                 missingPackageErrors.clear();
                 missingClassWithPackageErrors.clear();
                 missingClassErrors.clear();
-
+                
                 JavaUtils.printToConsole("Saving POM file...");
-                MavenUtils.savePomFile(dependencies, projectName, pomFileName, relativeSourcesPath);
+                MavenUtils.mergeDependencies(dependenciesNode, dependencies);
+                XmlUtils.saveXmlDocument(pomDocument, pomFileName);
             }
         }
         catch (Exception e) {
