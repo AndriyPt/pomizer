@@ -8,13 +8,13 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.AbstractMap;
 import java.util.AbstractMap.SimpleEntry;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 
 import org.dom4j.Document;
-import org.dom4j.DocumentException;
 import org.dom4j.Node;
-import org.dom4j.io.SAXReader;
+import org.dom4j.tree.DefaultElement;
 import org.jaxen.JaxenException;
 import org.jaxen.SimpleNamespaceContext;
 import org.jaxen.XPath;
@@ -55,35 +55,78 @@ public class MavenUtils {
     }
 
     @SuppressWarnings({ "rawtypes", "unchecked" })
-    public static void readPomDependencies(final String pomFileName, final List<Dependency> dependencies) {
+    public static DefaultElement readPomDependencies(final Document pomDocument, final List<Dependency> dependencies) {
 
-        SAXReader reader = new SAXReader();
+        DefaultElement dependenciesNode = null;
+        
         try {
-            Document pomDocument = reader.read(pomFileName);
 
             HashMap map = new HashMap();
             map.put("default", XmlConstants.POM_DEFAULT_NAMESPACE);
 
-            XPath xpath = new Dom4jXPath("/default:project/default:dependencies/default:dependency");
+            XPath xpath = new Dom4jXPath("/default:project/default:dependencies");
             xpath.setNamespaceContext(new SimpleNamespaceContext(map));
-
-            List dependenciesNodes = xpath.selectNodes(pomDocument);
-            for (int i = 0; i < dependenciesNodes.size(); i++) {
-                Node dependecyNode = (Node) dependenciesNodes.get(i);
-                Dependency dependency = XmlUtils.readDependencyFromXml(dependecyNode, true);
-                if (-1 == dependencies.indexOf(dependency)) {
-                    dependencies.add(dependency);
-                }
-            }
-        }
-        catch (DocumentException e) {
-            e.printStackTrace();
+            
+            dependenciesNode = (DefaultElement)xpath.selectSingleNode(pomDocument);
+            readDependenciesListFromXmlNode(dependencies, dependenciesNode);
         }
         catch (JaxenException e) {
             e.printStackTrace();
         }
+        
+        return dependenciesNode;
     }
 
+    private static void readDependenciesListFromXmlNode(final List<Dependency> dependencies, 
+            final DefaultElement dependenciesNode) {
+        
+        dependencies.clear();
+        
+        if (null != dependenciesNode) {
+            for (int i = 0; i < dependenciesNode.nodeCount(); i++) {
+                Node dependecyNode = (Node) dependenciesNode.node(i);
+                if (Node.ELEMENT_NODE == dependecyNode.getNodeType()) {
+                    Dependency dependency = XmlUtils.readDependencyFromXml(dependecyNode, true);
+                    if (-1 == dependencies.indexOf(dependency)) {
+                        dependencies.add(dependency);
+                    }
+                }
+            }
+        }
+    }
+    
+
+    public static void mergeDependencies(final DefaultElement dependenciesNode, final List<Dependency> dependencies) 
+            throws Exception {
+        
+        List<Dependency> pomDependeciesList = new ArrayList<Dependency>();
+        readDependenciesListFromXmlNode(pomDependeciesList, dependenciesNode);
+
+        int pomDependenciesIndex = pomDependeciesList.size() - 1; 
+        for (int i = dependenciesNode.nodeCount() - 1; i >= 0; i--) {
+            Node dependecyNode = (Node) dependenciesNode.node(i);
+            if (Node.ELEMENT_NODE == dependecyNode.getNodeType()) {
+                if (pomDependenciesIndex < 0) {
+                    throw new Exception("Unsynchronized dependencies list with XML on index: " + i);
+                }
+                Dependency dependency = pomDependeciesList.get(pomDependenciesIndex);
+                if (-1 == dependencies.indexOf(dependency)) {
+                    dependecyNode.detach();
+                    pomDependeciesList.remove(pomDependenciesIndex);
+                }
+                pomDependenciesIndex--;
+            }
+        }
+            
+        for (int i = 0; i < dependencies.size(); i++) {
+            Dependency dependency = dependencies.get(i);
+            if (-1 == pomDependeciesList.indexOf(dependency)) {
+                XmlUtils.addDependencyToXmlParent(dependenciesNode, dependency);
+                pomDependeciesList.add(dependency);
+            }
+        }
+    }
+    
     private static String buildMavenCommandLine(final String action, final String parameters) {
         String commandLine = "mvn " + action + " ";
         if (!StringUtils.isNullOrEmpty(parameters)) {
@@ -94,6 +137,24 @@ public class MavenUtils {
         }
         return commandLine;
     }
+    
+    public static void executeCleanTask(final String pomFileName) {
+        JavaUtils.printToConsole("Cleaning compiled sources...");
+        String commandLine = buildMavenCommandLine("clean", String.format("-f \"%s\"", pomFileName));
+        
+        Runtime runtime = Runtime.getRuntime();
+        Process proc;
+        try {
+            proc = runtime.exec(commandLine);
+            InputStream in = proc.getInputStream();
+            BufferedReader br = new BufferedReader(new InputStreamReader(in));
+            while (null != br.readLine());
+        }
+        catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+    
 
     public static boolean compilePomFile(final String pomFileName, final List<String> missingPackageErrors,
             final List<String> missingClassErrors, List<SimpleEntry<String, String>> missingClassWithPackageErrors) {

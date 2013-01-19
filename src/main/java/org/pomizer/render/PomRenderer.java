@@ -17,11 +17,14 @@ public class PomRenderer {
                         .format("<project xmlns=\""
                                 + XmlConstants.POM_DEFAULT_NAMESPACE
                                 + "\" xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" \n"
-                                + "xsi:schemaLocation=\"http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd\"> \n"
-                                + "  <modelVersion>4.0.0</modelVersion> \n" + "  <groupId>org.my.projects</groupId> \n"
-                                + "  <artifactId>%s</artifactId> \n" + "  <packaging>jar</packaging> \n"
-                                + "  <version>1.0-SNAPSHOT</version> \n" + "  <name>%s</name> \n"
-                                + "  <url>http://maven.apache.org</url> \n", projectName, projectName));
+                                + "xsi:schemaLocation=\"http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd\">\n"
+                                + "  <modelVersion>4.0.0</modelVersion>\n" 
+                                + "  <groupId>org.my.projects</groupId>\n"
+                                + "  <artifactId>%s</artifactId>\n" 
+                                + "  <packaging>jar</packaging>\n"
+                                + "  <version>1.0-SNAPSHOT</version>\n" 
+                                + "  <name>%s</name>\n"
+                                + "  <url>http://maven.apache.org</url>\n", projectName, projectName));
 
     }
 
@@ -38,16 +41,16 @@ public class PomRenderer {
     public static void writeDependeciesToPomFile(final FileWriter fileWritter, final List<Dependency> dependencies)
             throws IOException {
 
-        fileWritter.write("  <dependencies> \n");
+        fileWritter.write("  <dependencies>\n");
         for (int i = 0; i < dependencies.size(); i++) {
             Dependency dependency = dependencies.get(i);
-            fileWritter.write("    <dependency> \n");
+            fileWritter.write("    <dependency>\n");
             fileWritter.write("      <groupId>" + dependency.groupId + "</groupId>\n");
             fileWritter.write("      <artifactId>" + dependency.artifactId + "</artifactId>\n");
             fileWritter.write("      <version>" + dependency.version + "</version>\n");
-            fileWritter.write("    </dependency> \n");
+            fileWritter.write("    </dependency>\n");
         }
-        fileWritter.write("  </dependencies> \n");
+        fileWritter.write("  </dependencies>\n");
     }
 
     public static void writeFooterToPomFile(final FileWriter fileWritter) throws IOException {

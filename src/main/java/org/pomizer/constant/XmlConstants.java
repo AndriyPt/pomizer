@@ -13,6 +13,8 @@ public class XmlConstants {
     public static final String ARTIFACT_GROUP_ID = "groupId";
 
     public static final String ARTIFACT_VERSION = "version";
+    
+    public static final String DEPENDENCY = "dependency";
 
     public static final String POM_DEFAULT_NAMESPACE = "http://maven.apache.org/POM/4.0.0";
 }
