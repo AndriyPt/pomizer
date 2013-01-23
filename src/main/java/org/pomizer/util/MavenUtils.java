@@ -11,6 +11,7 @@ import java.util.AbstractMap.SimpleEntry;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.regex.Matcher;
 
 import org.dom4j.Document;
 import org.dom4j.Node;
@@ -155,15 +156,15 @@ public class MavenUtils {
         }
     }
     
-
+    
     public static boolean compilePomFile(final String pomFileName, final List<String> missingPackageErrors,
             final List<String> missingClassErrors, List<SimpleEntry<String, String>> missingClassWithPackageErrors) {
-
+        
         boolean result = true;
 
         JavaUtils.printToConsole("Compiling POM file...");
         String commandLine = buildMavenCommandLine("compile", String.format("-f \"%s\"", pomFileName));
-
+        
         Runtime runtime = Runtime.getRuntime();
         Process proc;
         try {
@@ -171,53 +172,34 @@ public class MavenUtils {
             InputStream in = proc.getInputStream();
 
             BufferedReader br = new BufferedReader(new InputStreamReader(in));
+            boolean foundCompilationErrorSection = false;
             String line = null;
 
-            while (null != (line = br.readLine())) {
-
-                if (line.contains(CompilationConstants.COMPILATION_ERROR_HEADER)) {
-                    result = false;
+            while ((null != (line = br.readLine())) && !foundCompilationErrorSection) {
+                foundCompilationErrorSection = CompilationConstants.COMPILATION_ERRORS_SECTION_START.matcher(
+                        line).matches();
+            }
+            
+            if (foundCompilationErrorSection) {
+                result = false;
+                
+                while ((null != line) && !CompilationConstants.ERROR_LINE.matcher(line).matches()) {
+                    line = br.readLine();
                 }
-
-                //TODO: Add logic here to read all errors line till next error or end of section
-                if (line.startsWith(CompilationConstants.ERROR_PREFIX)) {
-                    int lastDelimiterIndex = line.lastIndexOf(':');
-                    line = line.substring(lastDelimiterIndex + 1).trim();
-
-                    if (!compilationErrorPackageDoesntExists(missingPackageErrors, line)) { 
-                        if (line.contains(CompilationConstants.SYMBOL_ERROR_MESSAGE)) {
-                            line = br.readLine();
-                            if (null != line) {
-
-                                br.mark(5000);
-                                compilationErrorCannotFindClass(missingClassErrors, line);
-                                br.reset();
-
-                                compilationErrorCannotFindClassWithPackage(missingClassErrors,
-                                        missingClassWithPackageErrors, br, line);
-                                br.reset();
-
-                                compilationErrorCannotFindMethodInInterface(missingClassErrors,
-                                        missingClassWithPackageErrors, br, line);
-                                br.reset();
-                                
-                                compilationErrorCannotFindMethodInClass(missingClassErrors,
-                                        missingClassWithPackageErrors, br, line);
-                                br.reset();
-                                
-                                compilationErrorCannotFindVariableInInterface(missingClassErrors,
-                                        missingClassWithPackageErrors, br, line);
-                                br.reset();
-                                
-                                compilationErrorCannotFindVariableInClass(missingClassErrors,
-                                        missingClassWithPackageErrors, br, line);
-                                br.reset();
-                            }
-                        }
-
-                        compilationErrorCannotAccessClass(missingClassWithPackageErrors, br, line);
+                
+                while ((null != line) && CompilationConstants.ERROR_LINE.matcher(line).matches()) {
+                    StringBuilder sb = new StringBuilder(line);
+                    while ((null != (line = br.readLine())) && 
+                            !CompilationConstants.ANY_MESSAGE_TYPE_LINE.matcher(line).matches()) {
+                        sb.append(' ');
+                        sb.append(line);
                     }
+                    
+                    processErrorPatterns(sb.toString(), missingPackageErrors, missingClassErrors, 
+                            missingClassWithPackageErrors);
                 }
+                
+                while (null != (line = br.readLine()));
             }
         }
         catch (IOException e) {
@@ -225,181 +207,65 @@ public class MavenUtils {
         }
         return result;
     }
-
-    private static String compilationErrorCannotAccessClass(
-            List<SimpleEntry<String, String>> missingClassWithPackageErrors, BufferedReader br, String line)
-            throws IOException {
+    
+    private static void processErrorPatterns(final String errorLine, final List<String> missingPackageErrors,
+            final List<String> missingClassErrors, final List<SimpleEntry<String, String>> missingClassWithPackageErrors) {
         
-        int lastDelimiterIndex;
+        Matcher matcher;
         
-        // Example of situation
-        // [ERROR] /C:/test/src/TestClass.java:7: cannot access com.test.second.third.servlet.RequestSupport
-        // class file for com.test.second.third.servlet.RequestSupport not found
-        if (line.contains(CompilationConstants.CANNOT_ACCESS_ERROR)) {
-            line = br.readLine();
-            if (line.startsWith(CompilationConstants.CANNOT_ACCESS_ERROR_PREFIX)
-                    && line.endsWith(CompilationConstants.CANNOT_ACCESS_ERROR_SUFIX)) {
-
-                String fullClassName = line.substring(
-                        CompilationConstants.CANNOT_ACCESS_ERROR_PREFIX.length(),
-                        line.length() - CompilationConstants.CANNOT_ACCESS_ERROR_SUFIX.length()).trim();
-                lastDelimiterIndex = fullClassName.lastIndexOf('.');
-                if (-1 < lastDelimiterIndex) {
-                    AbstractMap.SimpleEntry<String, String> classWithPackage = new SimpleEntry<String, String>(
-                            fullClassName.substring(lastDelimiterIndex + 1), fullClassName.substring(0,
-                                    lastDelimiterIndex));
-                    if (-1 == missingClassWithPackageErrors.indexOf(classWithPackage)) {
-                        missingClassWithPackageErrors.add(classWithPackage);
-                    }
-                }
+        if ((matcher = CompilationConstants.CANNOT_FIND_PACKAGE.matcher(errorLine)).find()) {
+            if (-1 == missingPackageErrors.indexOf(matcher.group(1))) {
+                missingPackageErrors.add(matcher.group(1));
             }
         }
-        return line;
-    }
-    
-    //TODO: Update errors parsing algorithm
-    private static String compilationErrorPatternParsing(final String missingErrorPrefix, final String locationPrefix, 
-            final List<String> missingClassErrors, List<SimpleEntry<String, String>> missingClassWithPackageErrors, 
-            BufferedReader br, String line) throws IOException {
-        
-        // [ERROR] /C:/test/src/TestClass.java:54: cannot find symbol
-        // <missingErrorPrefix> <some text>
-        // <locationPrefix> com.test.second.third.SomeClass
-        if (line.startsWith(missingErrorPrefix)) {
-            line = br.readLine();
-            if (line.startsWith(locationPrefix)) {
-                String fullClassName = line.substring(locationPrefix.length()).trim();
-
-                final String packageName = ClassUtils.getPackageFromFullName(fullClassName);
-                final String className = ClassUtils.getClassNameFromFullName(fullClassName);
-
-                if (StringUtils.isNullOrEmpty(packageName)) {
-                    if (-1 == missingClassErrors.indexOf(className)) {
-                        missingClassErrors.add(className);
-                    }
-                }
-                else {
-                    AbstractMap.SimpleEntry<String, String> classWithPackage = new SimpleEntry<String, String>(
-                            className, packageName);
-
-                    if (-1 == missingClassWithPackageErrors.indexOf(classWithPackage)) {
-                        missingClassWithPackageErrors.add(classWithPackage);
-                    }
-                }
+        else if ((matcher = CompilationConstants.CANNOT_FIND_SYMBOL.matcher(errorLine)).find()) {
+            if (3 == matcher.groupCount()) {
+                addFullClassName(matcher.group(3), missingClassErrors, missingClassWithPackageErrors);
             }
+        } 
+        else if ((matcher = CompilationConstants.CANNOT_FIND_CLASS_WITH_PACKAGE.matcher(errorLine)).find()) {
+            if (2 == matcher.groupCount()) {
+                addClassWithPackage(matcher.group(2), matcher.group(1), missingClassWithPackageErrors);
+            }
+        } 
+        else if ((matcher = CompilationConstants.CANNOT_FIND_CLASS.matcher(errorLine)).find()) {
+            addMissingClass(matcher.group(1), missingClassErrors);
         }
-        return line;
-    }
-    
-    private static String compilationErrorCannotFindVariableInInterface(final List<String> missingClassErrors,
-            List<SimpleEntry<String, String>> missingClassWithPackageErrors, BufferedReader br, String line)
-            throws IOException {
-        
-        // [ERROR] /C:/test/src/TestClass.java:54: cannot find symbol
-        // symbol  : variable TEST_12
-        // location: interface com.test.second.third.SomeInterface
-        return compilationErrorPatternParsing(CompilationConstants.SYMBOL_VARIABLE_ERROR_PREFIX, 
-                CompilationConstants.SYMBOL_LOCATION_INTERFACE_PREFIX, missingClassErrors, 
-                missingClassWithPackageErrors, br, line);
-    }
-    
-    private static String compilationErrorCannotFindVariableInClass(final List<String> missingClassErrors,
-            List<SimpleEntry<String, String>> missingClassWithPackageErrors, BufferedReader br, String line)
-            throws IOException {
-        
-        // [ERROR] /C:/test/src/TestClass.java:54: cannot find symbol
-        // symbol  : variable TEST_12
-        // location: class com.test.second.third.SomeClass
-        return compilationErrorPatternParsing(CompilationConstants.SYMBOL_VARIABLE_ERROR_PREFIX, 
-                CompilationConstants.SYMBOL_LOCATION_CLASS_PREFIX, missingClassErrors, 
-                missingClassWithPackageErrors, br, line);
-    }
-    
-
-    private static String compilationErrorCannotFindMethodInInterface(final List<String> missingClassErrors,
-            List<SimpleEntry<String, String>> missingClassWithPackageErrors, BufferedReader br, String line)
-            throws IOException {
-        
-        // [ERROR] /C:/test/src/TestClass.java:54: cannot find symbol
-        // symbol : method send(javax.jms.ObjectMessage)
-        // location: interface javax.jms.MessageProducer
-        return compilationErrorPatternParsing(CompilationConstants.SYMBOL_METHOD_ERROR_PREFIX, 
-                CompilationConstants.SYMBOL_LOCATION_INTERFACE_PREFIX, missingClassErrors, 
-                missingClassWithPackageErrors, br, line);
-    }
-    
-    private static String compilationErrorCannotFindMethodInClass(final List<String> missingClassErrors,
-            List<SimpleEntry<String, String>> missingClassWithPackageErrors, BufferedReader br, String line)
-            throws IOException {
-        
-        // [ERROR] /C:/test/src/TestClass.java:54: cannot find symbol
-        //symbol  : method send(javax.jms.ObjectMessage)
-        //location: class javax.jms.MessageProducer
-        return compilationErrorPatternParsing(CompilationConstants.SYMBOL_METHOD_ERROR_PREFIX, 
-                CompilationConstants.SYMBOL_LOCATION_CLASS_PREFIX, missingClassErrors, 
-                missingClassWithPackageErrors, br, line);
-    }
-
-    private static String compilationErrorCannotFindClassWithPackage(final List<String> missingClassErrors,
-            List<SimpleEntry<String, String>> missingClassWithPackageErrors, BufferedReader br, String line)
-            throws IOException {
-        
-        // Example of situation
-        // [ERROR] /C:/test/src/TestClass.java:[5,29] : cannot find symbol
-        // symbol : class TestClass
-        // location: package com.test.second.third
-        if (line.startsWith(CompilationConstants.SYMBOL_CLASS_ERROR_PREFIX)) {
-            String className = line.substring(
-                    CompilationConstants.SYMBOL_CLASS_ERROR_PREFIX.length()).trim();
-            line = br.readLine();
-            if (line.startsWith(CompilationConstants.CLASS_LOCATION_PACKAGE_PREFIX)) {
-                String packageName = line.substring(
-                        CompilationConstants.CLASS_LOCATION_PACKAGE_PREFIX.length()).trim();
-
-                AbstractMap.SimpleEntry<String, String> classWithPackage = new SimpleEntry<String, String>(
-                        className, packageName);
-
-                if (-1 == missingClassWithPackageErrors.indexOf(classWithPackage)) {
-                    missingClassWithPackageErrors.add(classWithPackage);
-                }
-            }
-            else {
-                if (-1 == missingClassErrors.indexOf(className)) {
-                    missingClassErrors.add(className);
-                }
-            }
+        else if ((matcher = CompilationConstants.CANNOT_ACCESS_CLASS.matcher(errorLine)).find()) {
+            addFullClassName(matcher.group(1), missingClassErrors, missingClassWithPackageErrors);
         }
-        return line;
-    }
-
-    private static void compilationErrorCannotFindClass(final List<String> missingClassErrors, String line) {
-        // Example of situation
-        // [ERROR] /C:/test/src/TestClass.java:[42,36] : cannot find symbol
-        // symbol: class Action
-        if (line.startsWith(CompilationConstants.SYMBOL_ERROR_PREFIX)) {
-            String className = line
-                    .substring(CompilationConstants.SYMBOL_ERROR_PREFIX.length()).trim();
-            if (-1 == missingClassErrors.indexOf(className)) {
-                missingClassErrors.add(className);
-            }
+        else {
+            JavaUtils.printToConsole("Not processed error: \"" + errorLine + "\"");
         }
     }
 
-    private static boolean compilationErrorPackageDoesntExists(final List<String> missingPackageErrors, final String line) {
+    private static void addFullClassName(final String fullClassName,
+            final List<String> missingClassErrors, final List<SimpleEntry<String, String>> missingClassWithPackageErrors) {
+        final String packageName = ClassUtils.getPackageFromFullName(fullClassName);
+        final String className = ClassUtils.getClassNameFromFullName(fullClassName);
         
-        boolean result = false;
-        
-        if (line.startsWith(CompilationConstants.PACKAGE_ERROR_PREFIX)
-                && line.endsWith(CompilationConstants.PACKAGE_ERROR_SUFIX)) {
-
-            result = true;
-            String packageName = line.substring(CompilationConstants.PACKAGE_ERROR_PREFIX.length(),
-                    line.length() - CompilationConstants.PACKAGE_ERROR_SUFIX.length()).trim();
-            if (-1 == missingPackageErrors.indexOf(packageName)) {
-                missingPackageErrors.add(packageName);
-            }
+        if (StringUtils.isNullOrEmpty(packageName)) {
+            addMissingClass(className, missingClassErrors);
         }
-        return result;
+        else {
+            addClassWithPackage(packageName, className, missingClassWithPackageErrors);
+        }
+    }
+
+    private static void addMissingClass(final String className, final List<String> missingClassErrors) {
+        if (-1 == missingClassErrors.indexOf(className)) {
+            missingClassErrors.add(className);
+        }
+    }
+
+    private static void addClassWithPackage(final String packageName, final String className,
+            final List<SimpleEntry<String, String>> missingClassWithPackageErrors) {
+        
+        AbstractMap.SimpleEntry<String, String> classWithPackage = new SimpleEntry<String, String>(
+                className, packageName);
+        if (-1 == missingClassWithPackageErrors.indexOf(classWithPackage)) {
+            missingClassWithPackageErrors.add(classWithPackage);
+        }
     }
     
     public static Dependency createDependecy(final String basePath, final String relativeFileName, final String version) {
