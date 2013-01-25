@@ -81,4 +81,19 @@ public class StringUtils {
     public static boolean isNullOrEmpty(final String value) {
         return (null == value) || value.isEmpty();
     }
+    
+    public static int getCharOccurenceCount(final String string, final char character) {
+        
+        int result = 0;
+        
+        if (!isNullOrEmpty(string)) {
+            for (int i = 0; i < string.length(); i++) {
+                if (string.charAt(i) == character) {
+                    result++;
+                }
+            }
+        }
+        
+        return result;
+    }
 }

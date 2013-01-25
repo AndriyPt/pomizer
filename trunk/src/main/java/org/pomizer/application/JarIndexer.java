@@ -10,6 +10,8 @@ import java.util.Enumeration;
 import java.util.List;
 import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.apache.commons.io.FileUtils;
 import org.pomizer.comparator.JarIndexComparator;
@@ -185,6 +187,7 @@ public class JarIndexer {
     private static void processClasses(final String basePath, final int basePathIndex, Collection<File> jarFiles,
             List<RawJarInfo> jarNames, List<PackageInfo> packageNames, List<RawClassInfo> classNames) throws IOException {
         final String CLASS_EXTENSION = ".class";
+        final Pattern ANONYMOUS_CLASS_NAME = Pattern.compile("^([a-zA-Z_][a-zA-Z\\d_]*)\\$?\\d*$");
 
         int basePathLength = basePath.length();
         for (File foundFile : jarFiles) {
@@ -210,25 +213,33 @@ public class JarIndexer {
 
                         if (!StringUtils.isNullOrEmpty(packageName)) {
 
-                            // Nested class handling
-                            // TODO: Add here more logic to handle classes MyName$1.class
-                            className = className.replace('$', '.');
-
-                            PackageInfo packageInfo = new PackageInfo();
-                            packageInfo.name = packageName;
-                            int packageIndex = packageNames.indexOf(packageInfo);
-                            if (-1 == packageIndex) {
-                                packageNames.add(packageInfo);
+                            // Handling only full class name and nested class names
+                            if (StringUtils.getCharOccurenceCount(className, '$') < 2) {
+                                
+                                Matcher anonymousClassNameMatcher = ANONYMOUS_CLASS_NAME.matcher(className);
+                                if (anonymousClassNameMatcher.find()) {
+                                    className = anonymousClassNameMatcher.group(1);
+                                }
+                                else {
+                                    className = className.replace('$', '.');
+                                }
+    
+                                PackageInfo packageInfo = new PackageInfo();
+                                packageInfo.name = packageName;
+                                int packageIndex = packageNames.indexOf(packageInfo);
+                                if (-1 == packageIndex) {
+                                    packageNames.add(packageInfo);
+                                }
+                                else {
+                                    packageInfo = packageNames.get(packageIndex);
+                                }
+    
+                                RawClassInfo classInfo = new RawClassInfo();
+                                classInfo.name = className;
+                                classInfo.jarInfoList.add(currentJarInfo);
+                                classInfo.packageInfo = packageInfo;
+                                classNames.add(classInfo);
                             }
-                            else {
-                                packageInfo = packageNames.get(packageIndex);
-                            }
-
-                            RawClassInfo classInfo = new RawClassInfo();
-                            classInfo.name = className;
-                            classInfo.jarInfoList.add(currentJarInfo);
-                            classInfo.packageInfo = packageInfo;
-                            classNames.add(classInfo);
                         }
                     }
                 }
