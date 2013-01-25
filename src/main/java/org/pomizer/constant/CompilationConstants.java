@@ -43,17 +43,17 @@ public class CompilationConstants {
     // [ERROR] /C:/test/src/TestClass.java:[74,53] C:\test\src\TestClass.java:74: cannot find symbol
     // symbol  : method send(javax.jms.ObjectMessage)
     // location: class javax.jms.MessageProducer
+    public static final Pattern CANNOT_FIND_SYMBOL = Pattern.compile("^" + ERROR_PREFIX 
+            + ".+cannot find symbol\\s+symbol\\s*:?\\s*(variable|method).+location\\s*:?\\s*(class|interface)\\s+(\\S+)\\s*$");
+    
+    // [ERROR] /C:/test/src/TestClass.java:[74,53] C:\test\src\TestClass.java:74: cannot find symbol
+    // symbol: class Action
     
     // [ERROR] /C:/test/src/TestClass.java:[74,53] C:\test\src\TestClass.java:74: cannot find symbol
     // symbol  : class MyClass
     // location: class com.test.second.third.TestClass
-    public static final Pattern CANNOT_FIND_SYMBOL = Pattern.compile("^" + ERROR_PREFIX 
-            + ".+cannot find symbol\\s+symbol\\s*:?\\s*(variable|method|class).+location\\s*:?\\s*(class|interface)\\s+(\\S+)\\s*$");
-    
-    // [ERROR] /C:/test/src/TestClass.java:[74,53] C:\test\src\TestClass.java:74: cannot find symbol
-    // symbol: class Action
     public static final Pattern CANNOT_FIND_CLASS = Pattern.compile("^" + ERROR_PREFIX 
-            + ".+cannot find symbol\\s+symbol\\s*:?\\s*class\\s+(\\S+)\\s*$");
+            + ".+cannot find symbol\\s+symbol\\s*:?\\s*class\\s+(\\S+)(\\s*|\\s+location\\s*:?\\s*(interface|class)\\s+\\S+\\s*)$");
    
     // [ERROR] /C:/test/src/TestClass.java:[42,36] C:/test/src/TestClass.java:18: package com.test.second.third does not exist
     public static final Pattern CANNOT_FIND_PACKAGE = Pattern.compile("^" + ERROR_PREFIX 
