@@ -12,14 +12,15 @@ public class StringUtils {
 
         int dotPos = filePathName.lastIndexOf('.');
         int slashPos = filePathName.lastIndexOf('\\');
-        if (slashPos == -1)
+        if (-1 == slashPos) {
             slashPos = filePathName.lastIndexOf('/');
-
-        if (dotPos > slashPos) {
-            return filePathName.substring(slashPos > 0 ? slashPos + 1 : 0, dotPos);
         }
 
-        return filePathName.substring(slashPos > 0 ? slashPos + 1 : 0);
+        if (dotPos > slashPos) {
+            return filePathName.substring((slashPos > 0) ? slashPos + 1 : 0, dotPos);
+        }
+
+        return filePathName.substring((slashPos > 0) ? slashPos + 1 : 0);
     }
 
     public static String changeFileExtension(final String fileName, final String newExtension) {
