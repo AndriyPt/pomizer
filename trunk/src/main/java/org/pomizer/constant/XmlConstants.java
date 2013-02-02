@@ -17,4 +17,6 @@ public class XmlConstants {
     public static final String DEPENDENCY = "dependency";
 
     public static final String POM_DEFAULT_NAMESPACE = "http://maven.apache.org/POM/4.0.0";
+    
+    public static final String USE_INDEX = "use_index";
 }

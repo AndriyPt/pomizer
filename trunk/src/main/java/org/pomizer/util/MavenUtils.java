@@ -133,10 +133,7 @@ public class MavenUtils {
         if (!StringUtils.isNullOrEmpty(parameters)) {
             commandLine += parameters;
         }
-        if (JavaUtils.isWindows()) {
-            commandLine = "cmd /c " + commandLine;
-        }
-        return commandLine;
+        return JavaUtils.adjustCommandLine(commandLine);
     }
     
     public static void executeCleanTask(final String pomFileName) {

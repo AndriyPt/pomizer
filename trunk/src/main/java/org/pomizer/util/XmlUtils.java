@@ -2,6 +2,7 @@ package org.pomizer.util;
 
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.HashMap;
 
 import org.dom4j.Document;
@@ -21,6 +22,27 @@ import org.pomizer.model.Dependency;
 
 public class XmlUtils {
 
+    public static String getAttributeValue(final Node node, final String attributeName) {
+        
+        String result = null;
+        if (null != node) {
+            result = (String)node.selectObject(String.format("string(./@%s)",  attributeName));  
+        }
+        return result;
+    }
+    
+    public static boolean getChildNodeBooleanValue(final Node parent, final String childName, 
+            final boolean defaultValue) {
+        
+        String value = getChildNodeTrimmedText(parent, childName);
+        if (StringUtils.isNullOrEmpty(value)) {
+            return defaultValue;
+        }
+        
+        return Boolean.parseBoolean(value);
+        
+    }
+    
     public static String getChildNodeTrimmedText(final Node parent, final String childName) {
         return getChildNodeTrimmedText(parent, childName, false);
     }
@@ -83,16 +105,14 @@ public class XmlUtils {
         }
     }
     
-    public static Document loadXmlDocument(final String xmlFileName) {
+    public static Document loadXmlDocument(final String xmlFileName) throws DocumentException {
         SAXReader reader = new SAXReader();
-        Document result = null;
-        try {
-            result = reader.read(xmlFileName);
-        }
-        catch (DocumentException e) {
-            e.printStackTrace();
-        }
-        return result;
+        return reader.read(xmlFileName);
+    }
+    
+    public static Document loadXmlDocument(final InputStream inputStream) throws DocumentException {
+        SAXReader reader = new SAXReader();
+        return reader.read(inputStream);
     }
     
     public static void saveXmlDocument(final Document xmlDocument, final String xmlFileName) {

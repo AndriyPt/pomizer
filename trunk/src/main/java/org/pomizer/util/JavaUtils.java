@@ -1,6 +1,7 @@
 package org.pomizer.util;
 
 import java.io.File;
+import java.io.IOException;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 
@@ -85,4 +86,33 @@ public class JavaUtils {
             System.exit(1);
         }
     }
+    
+    public static String adjustCommandLine(final String commandLine) {
+        
+        String result = commandLine;
+        
+        if (isWindows()) {
+            result = "cmd /c " + commandLine;
+        }
+        return result;
+    }
+    
+    public static boolean isParentOf(final String directoryPath, final String fileName) 
+            throws IOException {
+
+        boolean result = false;
+        
+        File directoryFile = new File(directoryPath).getCanonicalFile();
+        File childFile = new File(fileName).getCanonicalFile();
+
+        File parentFile = childFile;
+        while (null != parentFile) {
+            if (directoryFile.equals(parentFile)) {
+                result = true;
+                break;
+            }
+            parentFile = parentFile.getParentFile();
+        }
+        return result;
+    }    
 }
