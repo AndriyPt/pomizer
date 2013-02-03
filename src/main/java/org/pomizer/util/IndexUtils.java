@@ -3,6 +3,7 @@ package org.pomizer.util;
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
+import java.util.List;
 import java.util.regex.Pattern;
 
 import org.pomizer.model.IndexInfo;
@@ -123,5 +124,9 @@ public class IndexUtils {
                 indeces.packageNamesJarIndeces[i][j] = Integer.parseInt(values[j + 1]);
             }
         }
+    }
+
+    public static void getJarsForClass(final IndexInfo index, final String className, final List<String> deploymentJarsList) {
+        // TODO Implement
     }
 }
