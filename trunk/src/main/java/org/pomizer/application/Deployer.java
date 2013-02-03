@@ -27,6 +27,7 @@ import org.pomizer.util.JavaUtils;
 import org.pomizer.util.StringUtils;
 import org.pomizer.util.SvnUtils;
 import org.pomizer.util.XmlUtils;
+import org.pomizer.wrapper.DeployerChangeSet;
 
 public class Deployer {
     
@@ -61,6 +62,7 @@ public class Deployer {
             Map<String, List<SimpleEntry<String, String>>> jarsToDeploy = 
                     new HashMap<String, List<SimpleEntry<String, String>>>();
             Map<String, List<String>> filesToDeploy = new HashMap<String, List<String>>();
+            DeployerChangeSet changeset = new DeployerChangeSet(configurationFileName);
             
             loadSettingsSection("/deployer/settings", configurationXmlDocument, globalSettings);
             loadProjectsSection(projects, configurationXmlDocument, globalSettings);
@@ -68,7 +70,11 @@ public class Deployer {
             loadPostProcessCommands(configurationXmlDocument, postProcessCallCommands);
             
             index = loadIndex(configurationXmlDocument, projects);
+            
+            JavaUtils.printToConsole("Processing changes...");
             processProjectChanges(projects, index, jarsToDeploy, filesToDeploy);
+            
+            //TODO: Add code here to propagate changes on server
             
             JavaUtils.printToConsole("Finished");
         }
