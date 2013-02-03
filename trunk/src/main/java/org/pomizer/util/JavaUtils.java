@@ -114,5 +114,26 @@ public class JavaUtils {
             parentFile = parentFile.getParentFile();
         }
         return result;
-    }    
+    }
+    
+    public static String ensurePathHasSeparatorAtTheEnd(final String path) {
+        String result = path;
+        if (!StringUtils.isNullOrEmpty(result)) {
+            if (!result.endsWith(File.separator)) {
+                result += File.separator;
+            }
+        }
+        return result;
+    }
+    
+    public static boolean isFile(final String path) {
+        final File pathFile = new File(path); 
+        return pathFile.isFile();
+    }
+    
+    public static boolean isTheSamePath(final String first, final String second) throws IOException {
+        final File firstFile = new File(first);
+        final File secondFile = new File(second);
+        return firstFile.getCanonicalPath().equals(secondFile.getCanonicalPath());
+    }
 }
