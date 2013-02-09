@@ -1,9 +1,22 @@
 package org.pomizer.util;
 
+import java.io.BufferedReader;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import java.net.URL;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
+import java.util.Collection;
+import java.util.Map;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipInputStream;
+import java.util.zip.ZipOutputStream;
+
+import org.apache.commons.io.FileUtils;
 
 public class JavaUtils {
 
@@ -135,5 +148,107 @@ public class JavaUtils {
         final File firstFile = new File(first);
         final File secondFile = new File(second);
         return firstFile.getCanonicalPath().equals(secondFile.getCanonicalPath());
+    }
+    
+    public static String getParentFolder(final String path) {
+        final File pathFile = new File(path);
+        return pathFile.getParentFile().getAbsolutePath();
+    }
+    
+    public static String getFileName(final String fullFileName) {
+        final File file = new File(fullFileName);
+        return file.getName();
+    }
+    
+    
+    public static String getFileNameWithoutExtension(final String fullFileName) {
+        
+        String result = getFileName(fullFileName);
+        int index = result.lastIndexOf('.');
+        
+        if (-1 != index) {
+            result = result.substring(0, index);
+        }
+        
+        return result;
+    }
+
+    public static void addFilesToExistingZip(String jarPath, Map<String, Collection<File>> files) throws IOException {
+        
+        final File tempFile = File.createTempFile("jar_temp_file", null);
+        tempFile.delete();
+        
+        final File jarFile = new File(jarPath);
+        FileUtils.copyFile(jarFile, tempFile);
+
+        byte[] buffer = new byte[1024];
+
+        ZipInputStream zipInputStream = new ZipInputStream(new FileInputStream(tempFile));
+        //TODO: Check if we can output to real file under JBoss
+        ZipOutputStream zipOutputStream = new ZipOutputStream(new FileOutputStream(jarFile));
+
+        ZipEntry entry = zipInputStream.getNextEntry();
+        while (null != entry) {
+            String name = entry.getName();
+            boolean fileChanged = true;
+            for (String parentPath : files.keySet()) {
+                for (File file : files.get(parentPath)) { 
+                    if (file.getName().equals(name)) {
+                        fileChanged = false;
+                        break;
+                    }
+                }
+            }
+            if (fileChanged) {
+                zipOutputStream.putNextEntry(new ZipEntry(name));
+                int length;
+                while ((length = zipInputStream.read(buffer)) > 0) {
+                    zipOutputStream.write(buffer, 0, length);
+                }
+            }
+            entry = zipInputStream.getNextEntry();
+        }
+        
+        zipInputStream.close();
+        
+        for (String parentPath : files.keySet()) {
+            for (File file : files.get(parentPath)) { 
+                InputStream in = new FileInputStream(file);
+                zipOutputStream.putNextEntry(new ZipEntry(file.getName()));
+                int len;
+                while ((len = in.read(buffer)) > 0) {
+                    zipOutputStream.write(buffer, 0, len);
+                }
+                zipOutputStream.closeEntry();
+                in.close();
+            }
+        }
+        zipOutputStream.close();
+        tempFile.delete();
+    }
+    
+    public static void downloadUrl(final String url) throws IOException {
+        final URL downloader = new URL(url);
+        final BufferedReader inputStream = new BufferedReader(new InputStreamReader(
+                downloader.openStream()));
+        while (null != inputStream.readLine());
+        inputStream.close();        
+    }
+
+    public static void executeCommand(final String commandLine) {
+        Runtime runtime = Runtime.getRuntime();
+        Process proc;
+        try {
+            proc = runtime.exec(adjustCommandLine(commandLine));
+            InputStream in = proc.getInputStream();
+            BufferedReader br = new BufferedReader(new InputStreamReader(in));
+            String line;
+            while (null != (line = br.readLine())) {
+                printToConsole(line);
+            }
+        }
+        catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 }

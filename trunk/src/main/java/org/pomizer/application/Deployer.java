@@ -2,12 +2,15 @@ package org.pomizer.application;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.AbstractMap.SimpleEntry;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.FilenameUtils;
+import org.apache.commons.io.filefilter.WildcardFileFilter;
 import org.dom4j.Document;
 import org.dom4j.DocumentException;
 import org.dom4j.Node;
@@ -32,6 +35,12 @@ import org.pomizer.wrapper.DeployerChangeSet;
 public class Deployer {
     
     private static String JAVA_FILE_EXTENSION = ".java";
+
+    private static String CLASS_FILE_EXTENSION = ".java";
+    
+    private static String BACKUP_FILE_EXTENSION = "bck";
+
+    private static String BACKUP_FOLDER = "backup";
     
     public static void main(String[] args) {
 
@@ -59,8 +68,8 @@ public class Deployer {
             List<String> postProcessCallUrls = new ArrayList<String>();
             List<DeployerCommandInfo> postProcessCallCommands = new ArrayList<DeployerCommandInfo>();
             
-            Map<String, List<SimpleEntry<String, String>>> jarsToDeploy = 
-                    new HashMap<String, List<SimpleEntry<String, String>>>();
+            Map<String, Map<String, String>> jarsToDeploy = 
+                    new HashMap<String, Map<String, String>>();
             Map<String, List<String>> filesToDeploy = new HashMap<String, List<String>>();
             DeployerChangeSet changeset = new DeployerChangeSet(configurationFileName);
             
@@ -74,7 +83,12 @@ public class Deployer {
             JavaUtils.printToConsole("Processing changes...");
             processProjectChanges(projects, index, jarsToDeploy, filesToDeploy);
             
-            //TODO: Add code here to propagate changes on server
+            final String backupFolder = FilenameUtils.concat(FilenameUtils.getBaseName(configurationFileName), 
+                    BACKUP_FOLDER);
+            deployJars(jarsToDeploy, changeset, backupFolder);
+            deployFiles(filesToDeploy, changeset, backupFolder);
+            processUrls(postProcessCallUrls);
+            processCommands(postProcessCallCommands, jarsToDeploy, filesToDeploy);
             
             JavaUtils.printToConsole("Finished");
         }
@@ -83,8 +97,124 @@ public class Deployer {
         }
     }
 
+    private static void processCommands(List<DeployerCommandInfo> postProcessCallCommands,
+            Map<String, Map<String, String>> jarsToDeploy, Map<String, List<String>> filesToDeploy) throws IOException {
+        JavaUtils.printToConsole("Executing commands...");
+        for (DeployerCommandInfo commandInfo : postProcessCallCommands) {
+            
+            boolean foundUpdatePath = false;
+            final String cannonicalUpdatePath = new File(commandInfo.onUpdatedPath).getCanonicalPath();
+            for (String jar : jarsToDeploy.keySet()) {
+                if (FilenameUtils.directoryContains(cannonicalUpdatePath, new File(jar).getCanonicalPath())) {
+                    foundUpdatePath = true;
+                    break;
+                }
+            }
+            
+            if (!foundUpdatePath) {
+                for (String fileName : filesToDeploy.keySet()) {
+                    for (int i = 0; i < filesToDeploy.get(fileName).size(); i++) {
+                        String deploymentPath = filesToDeploy.get(fileName).get(i);
+                        if (FilenameUtils.directoryContains(cannonicalUpdatePath, 
+                                new File(deploymentPath).getCanonicalPath())) {
+                            foundUpdatePath = true;
+                            break;
+                        }
+                    }
+                }
+                if (foundUpdatePath) {
+                    break;
+                }
+            }
+            
+            if (foundUpdatePath) {
+                JavaUtils.printToConsole("Executing command: " + commandInfo.commandLine);
+                JavaUtils.executeCommand(commandInfo.commandLine);
+            }
+        }
+    }
+
+    private static void processUrls(List<String> postProcessCallUrls) throws IOException {
+        JavaUtils.printToConsole("Calling URLs...");
+        for (String url : postProcessCallUrls) {
+            JavaUtils.printToConsole("Calling \"" + url + "\"...");
+            JavaUtils.downloadUrl(url);
+        }
+    }
+
+    private static void deployFiles(final Map<String, List<String>> filesToDeploy, final DeployerChangeSet changeset,
+            final String backupFolder) throws IOException {
+        
+        JavaUtils.printToConsole("Deploying files...");
+        for (String changedFileName : filesToDeploy.keySet()) {
+            
+            int position = changeset.indexOf(changedFileName);
+            File backupFile;
+            if (-1 == position) {
+                backupFile = File.createTempFile(FilenameUtils.getName(changedFileName).replace(File.separatorChar, '_'), 
+                        BACKUP_FILE_EXTENSION, new File(BACKUP_FOLDER));
+                backupFile.delete();
+                FileUtils.copyFile(new File(changedFileName), backupFile);
+                changeset.add(changedFileName, backupFile.getAbsolutePath());
+                changeset.save();
+            }
+            else {
+                backupFile = new File(backupFolder, changeset.getBackupPath(position));
+            }
+            
+            final File changedFile = new File(changedFileName);
+            
+            for (String pathToDeploy : filesToDeploy.get(changedFileName)) {
+                JavaUtils.printToConsole(String.format("Deploying file \"%s\" to \"%s\"...", 
+                        changedFile, pathToDeploy));
+                FileUtils.copyFile(changedFile, new File(pathToDeploy));
+            }
+        }
+    }
+
+    private static void deployJars(final Map<String, Map<String, String>> jarsToDeploy, final DeployerChangeSet changeset,
+            final String backupFolder) throws IOException {
+        
+        JavaUtils.printToConsole("Deploying jars...");
+        for (String jar : jarsToDeploy.keySet()) {
+            int position = changeset.indexOf(jar);
+            File backupFile;
+            if (-1 == position) {
+                backupFile = File.createTempFile(FilenameUtils.getName(jar).replace(File.separatorChar, '_'), 
+                        BACKUP_FILE_EXTENSION, new File(BACKUP_FOLDER));
+                backupFile.delete();
+                FileUtils.copyFile(new File(jar), backupFile);
+                changeset.add(jar, backupFile.getAbsolutePath());
+                changeset.save();
+            }
+            else {
+                backupFile = new File(backupFolder, changeset.getBackupPath(position));
+            }
+            
+            Map<String, Collection<File>> filesToAdd = new HashMap<String, Collection<File>>();
+            for (String classPath : jarsToDeploy.get(jar).keySet()) {
+                List<String> classNameWildcards = new ArrayList<String>();
+                classNameWildcards.add(classPath + CLASS_FILE_EXTENSION);
+                classNameWildcards.add(classPath + "$*" + CLASS_FILE_EXTENSION);
+                Collection<File> foundFiles = FileUtils.listFiles(new File(jarsToDeploy.get(jar).get(classPath)), 
+                        new WildcardFileFilter(classNameWildcards), null);
+                filesToAdd.put(jarsToDeploy.get(jar).get(classPath), foundFiles);
+            }
+            
+            JavaUtils.printToConsole(String.format("Deploying classes to \"%s\"...", jar));
+            for (String basePath : filesToAdd.keySet()) {
+                JavaUtils.printToConsole("  from path \"" + basePath + "\"");
+                for (File addedFiles : filesToAdd.get(basePath)) {
+                    JavaUtils.printToConsole("    adding file \"" + addedFiles.getPath() + "\"...");
+                }
+            }
+            
+            JavaUtils.addFilesToExistingZip(jar, filesToAdd);
+        }
+    }
+
     private static void processProjectChanges(final List<DeployerProject> projects, final IndexInfo index,
-            final Map<String, List<SimpleEntry<String, String>>> jarsToDeploy, final Map<String, List<String>> filesToDeploy)
+            final Map<String, Map<String, String>> jarsToDeploy, final Map<String, List<String>> filesToDeploy)
             throws IOException, DocumentException {
         
         for (int i = 0; i < projects.size(); i++) {
@@ -101,7 +231,7 @@ public class Deployer {
     }
 
     private static void processSourcesChanges(IndexInfo index,
-            Map<String, List<SimpleEntry<String, String>>> jarsToDeploy, DeployerProject project,
+            Map<String, Map<String, String>> jarsToDeploy, DeployerProject project,
             final String changedFile) throws IOException {
         
         for (int i = 0; i < project.sources.size(); i++) {
@@ -129,9 +259,10 @@ public class Deployer {
                     
                     final String jarPath = deploymentJarsList.get(j);
                     if (!jarsToDeploy.containsKey(jarPath)) {
-                        jarsToDeploy.put(jarPath, new ArrayList<SimpleEntry<String, String>>());
+                        jarsToDeploy.put(jarPath, new HashMap<String, String>());
                     }
-                    jarsToDeploy.get(jarPath).add(new SimpleEntry<String, String>(targetPath, classPath));
+                    jarsToDeploy.get(jarPath).put(classPath, targetPath);
+                    //TODO: Add here warning that adding two classPaths to the same JAR
                 }
             }
         }

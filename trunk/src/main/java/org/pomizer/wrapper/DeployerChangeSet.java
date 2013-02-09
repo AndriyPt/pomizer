@@ -80,6 +80,19 @@ public class DeployerChangeSet {
             .addAttribute(BACKUP_ATTRIBUTE, backupPath);
     }
     
+    public int indexOf(final String path) {
+        int result = -1;
+        
+        for (int i = 0; (i < this.getSize()) && (-1 != result); i++) {
+            if (this.getPath(i).equals(path)) {
+                result = i;
+                break;
+            }
+        }
+        
+        return result;
+    }
+    
     public void save() {
         XmlUtils.saveXmlDocument(document, fileName);
     }
