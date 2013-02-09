@@ -75,6 +75,7 @@ public class Deployer {
             
             loadSettingsSection("/deployer/settings", configurationXmlDocument, globalSettings);
             loadProjectsSection(projects, configurationXmlDocument, globalSettings);
+            loadCopySection(configurationXmlDocument, filesToDeploy);
             loadPostProcessCallUrls(configurationXmlDocument, postProcessCallUrls);
             loadPostProcessCommands(configurationXmlDocument, postProcessCallCommands);
             
@@ -94,6 +95,29 @@ public class Deployer {
         }
         catch (Exception e) {
             e.printStackTrace();
+        }
+    }
+
+    @SuppressWarnings("rawtypes")
+    private static void loadCopySection(final Document configurationXmlDocument, 
+            final Map<String, List<String>> filesToDeploy) {
+        
+        final List copyNodes = configurationXmlDocument.selectNodes("/deployer/copy");
+        if (null != copyNodes) {
+            for (int i = 0; i < copyNodes.size(); i++) {
+                Node copyNode = (Node)copyNodes.get(i);
+                String path = XmlUtils.getAttributeValue(copyNode, "path");
+                if (filesToDeploy.containsKey(path)) {
+                    filesToDeploy.put(path, new ArrayList<String>());
+                }
+                final List targetPaths = copyNode.selectNodes("./target");
+                if (null != targetPaths) {
+                    for (int j = 0; j < targetPaths.size(); j++) {
+                        Node targetPath = (Node)targetPaths.get(j);
+                        filesToDeploy.get(path).add(targetPath.getText());
+                    }
+                }
+            }
         }
     }
 
