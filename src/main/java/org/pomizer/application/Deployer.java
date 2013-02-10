@@ -36,9 +36,9 @@ public class Deployer {
     
     private static String JAVA_FILE_EXTENSION = ".java";
 
-    private static String CLASS_FILE_EXTENSION = ".java";
+    private static String CLASS_FILE_EXTENSION = ".class";
     
-    private static String BACKUP_FILE_EXTENSION = "bck";
+    private static String BACKUP_FILE_EXTENSION = ".bck";
 
     private static String BACKUP_FOLDER = "backup";
     
@@ -64,7 +64,7 @@ public class Deployer {
             
             DeployerSettings globalSettings = new DeployerSettings();
             List<DeployerProject> projects = new ArrayList<DeployerProject>();
-            IndexInfo index = null;
+            IndexInfo indeces = null;
             List<String> postProcessCallUrls = new ArrayList<String>();
             List<DeployerCommandInfo> postProcessCallCommands = new ArrayList<DeployerCommandInfo>();
             
@@ -72,6 +72,7 @@ public class Deployer {
                     new HashMap<String, Map<String, String>>();
             Map<String, List<String>> filesToDeploy = new HashMap<String, List<String>>();
             DeployerChangeSet changeset = new DeployerChangeSet(configurationFileName);
+            changeset.load();
             
             loadSettingsSection("/deployer/settings", configurationXmlDocument, globalSettings);
             loadProjectsSection(projects, configurationXmlDocument, globalSettings);
@@ -79,13 +80,15 @@ public class Deployer {
             loadPostProcessCallUrls(configurationXmlDocument, postProcessCallUrls);
             loadPostProcessCommands(configurationXmlDocument, postProcessCallCommands);
             
-            index = loadIndex(configurationXmlDocument, projects);
+            indeces = loadIndex(configurationXmlDocument, projects);
             
             JavaUtils.printToConsole("Processing changes...");
-            processProjectChanges(projects, index, jarsToDeploy, filesToDeploy);
+            processProjectChanges(projects, indeces, jarsToDeploy, filesToDeploy);
             
-            final String backupFolder = FilenameUtils.concat(FilenameUtils.getBaseName(configurationFileName), 
+            final String backupFolder = FilenameUtils.concat(FilenameUtils.getFullPath(configurationFileName),
                     BACKUP_FOLDER);
+            FileUtils.forceMkdir(new File(backupFolder));
+            
             deployJars(jarsToDeploy, changeset, backupFolder);
             deployFiles(filesToDeploy, changeset, backupFolder);
             processUrls(postProcessCallUrls);
@@ -107,7 +110,7 @@ public class Deployer {
             for (int i = 0; i < copyNodes.size(); i++) {
                 Node copyNode = (Node)copyNodes.get(i);
                 String path = XmlUtils.getAttributeValue(copyNode, "path");
-                if (filesToDeploy.containsKey(path)) {
+                if (!filesToDeploy.containsKey(path)) {
                     filesToDeploy.put(path, new ArrayList<String>());
                 }
                 final List targetPaths = copyNode.selectNodes("./target");
@@ -175,8 +178,8 @@ public class Deployer {
             int position = changeset.indexOf(changedFileName);
             File backupFile;
             if (-1 == position) {
-                backupFile = File.createTempFile(FilenameUtils.getName(changedFileName).replace(File.separatorChar, '_'), 
-                        BACKUP_FILE_EXTENSION, new File(BACKUP_FOLDER));
+                backupFile = File.createTempFile(FilenameUtils.getName(changedFileName).replace(
+                        File.separatorChar, '_').replace('.', '_')  + '_', BACKUP_FILE_EXTENSION, new File(BACKUP_FOLDER));
                 backupFile.delete();
                 FileUtils.copyFile(new File(changedFileName), backupFile);
                 changeset.add(changedFileName, backupFile.getAbsolutePath());
@@ -196,16 +199,17 @@ public class Deployer {
         }
     }
 
-    private static void deployJars(final Map<String, Map<String, String>> jarsToDeploy, final DeployerChangeSet changeset,
-            final String backupFolder) throws IOException {
+    private static void deployJars(final Map<String, Map<String, String>> jarsToDeploy, 
+            final DeployerChangeSet changeset, final String backupFolder) throws IOException {
         
         JavaUtils.printToConsole("Deploying jars...");
+        final File backupFolderFile = new File(backupFolder);
         for (String jar : jarsToDeploy.keySet()) {
             int position = changeset.indexOf(jar);
             File backupFile;
             if (-1 == position) {
-                backupFile = File.createTempFile(FilenameUtils.getName(jar).replace(File.separatorChar, '_'), 
-                        BACKUP_FILE_EXTENSION, new File(BACKUP_FOLDER));
+                backupFile = File.createTempFile(FilenameUtils.getName(jar).replace('.', '_')  + '_', 
+                        BACKUP_FILE_EXTENSION, backupFolderFile);
                 backupFile.delete();
                 FileUtils.copyFile(new File(jar), backupFile);
                 changeset.add(jar, backupFile.getAbsolutePath());
@@ -215,21 +219,31 @@ public class Deployer {
                 backupFile = new File(backupFolder, changeset.getBackupPath(position));
             }
             
-            Map<String, Collection<File>> filesToAdd = new HashMap<String, Collection<File>>();
+            Map<String, List<String>> filesToAdd = new HashMap<String, List<String>>();
             for (String classPath : jarsToDeploy.get(jar).keySet()) {
                 List<String> classNameWildcards = new ArrayList<String>();
-                classNameWildcards.add(classPath + CLASS_FILE_EXTENSION);
-                classNameWildcards.add(classPath + "$*" + CLASS_FILE_EXTENSION);
-                Collection<File> foundFiles = FileUtils.listFiles(new File(jarsToDeploy.get(jar).get(classPath)), 
+                classNameWildcards.add(FilenameUtils.getBaseName(classPath) + CLASS_FILE_EXTENSION);
+                classNameWildcards.add(FilenameUtils.getBaseName(classPath) + "$*" + CLASS_FILE_EXTENSION);
+                String targetDirectory = JavaUtils.ensurePathHasSeparatorAtTheEnd(
+                        jarsToDeploy.get(jar).get(classPath));
+                String fullClassFileDirectory = FilenameUtils.concat(targetDirectory, 
+                        FilenameUtils.getFullPath(classPath)); 
+                Collection<File> foundFiles = FileUtils.listFiles(new File(fullClassFileDirectory), 
                         new WildcardFileFilter(classNameWildcards), null);
-                filesToAdd.put(jarsToDeploy.get(jar).get(classPath), foundFiles);
+                if (!filesToAdd.containsKey(targetDirectory)) {
+                    filesToAdd.put(targetDirectory, new ArrayList<String>());
+                }
+                for (File file : foundFiles) {
+                    filesToAdd.get(targetDirectory).add(file.getAbsolutePath().substring(
+                            targetDirectory.length()));
+                }
             }
             
             JavaUtils.printToConsole(String.format("Deploying classes to \"%s\"...", jar));
             for (String basePath : filesToAdd.keySet()) {
                 JavaUtils.printToConsole("  from path \"" + basePath + "\"");
-                for (File addedFiles : filesToAdd.get(basePath)) {
-                    JavaUtils.printToConsole("    adding file \"" + addedFiles.getPath() + "\"...");
+                for (String addedFile : filesToAdd.get(basePath)) {
+                    JavaUtils.printToConsole("    adding file \"" + addedFile + "\"...");
                 }
             }
             
@@ -237,7 +251,7 @@ public class Deployer {
         }
     }
 
-    private static void processProjectChanges(final List<DeployerProject> projects, final IndexInfo index,
+    private static void processProjectChanges(final List<DeployerProject> projects, final IndexInfo indeces,
             final Map<String, Map<String, String>> jarsToDeploy, final Map<String, List<String>> filesToDeploy)
             throws IOException, DocumentException {
         
@@ -248,35 +262,37 @@ public class Deployer {
             loadChangesetForProject(project.path, changedFiles);
             
             for (int j = 0; j < changedFiles.size(); j++) {
-                processSourcesChanges(index, jarsToDeploy, project, changedFiles.get(j));
+                processSourcesChanges(indeces, jarsToDeploy, project, changedFiles.get(j));
                 processResourcesChanges(filesToDeploy, project, changedFiles.get(j));
             }
         }
     }
 
-    private static void processSourcesChanges(IndexInfo index,
+    private static void processSourcesChanges(IndexInfo indeces,
             Map<String, Map<String, String>> jarsToDeploy, DeployerProject project,
-            final String changedFile) throws IOException {
+            final String changedFileName) throws IOException {
         
+        final File changedFile = new File(changedFileName);
         for (int i = 0; i < project.sources.size(); i++) {
             final DeployerSourcesInfo sourcesInfo = project.sources.get(i);
-            String sourcesFullPath = JavaUtils.combinePaths(project.path, sourcesInfo.path);
+            String sourcesFullPath = FilenameUtils.concat(project.path, sourcesInfo.path);
+            final File sourceFullDirectory = new File(sourcesFullPath);
         
-            if (JavaUtils.isParentOf(sourcesFullPath, changedFile) && 
-                    changedFile.endsWith(JAVA_FILE_EXTENSION)) {
+            if (FileUtils.directoryContains(sourceFullDirectory, changedFile) && 
+                    changedFileName.endsWith(JAVA_FILE_EXTENSION)) {
                 
                 sourcesFullPath = JavaUtils.ensurePathHasSeparatorAtTheEnd(sourcesFullPath);
                 
-                String targetPath = JavaUtils.combinePaths(project.path, sourcesInfo.binariesFolder);
+                String targetPath = FilenameUtils.concat(project.path, sourcesInfo.binariesFolder);
                 targetPath = JavaUtils.ensurePathHasSeparatorAtTheEnd(targetPath);
                 
-                String classPath = changedFile.substring(sourcesFullPath.length(), 
-                        changedFile.length() - JAVA_FILE_EXTENSION.length());
+                String classPath = changedFileName.substring(sourcesFullPath.length(), 
+                        changedFileName.length() - JAVA_FILE_EXTENSION.length());
                 
                 List<String> deploymentJarsList = new ArrayList<String>(project.sources.get(i).deploymentPaths);
-                if (project.settings.useIndex && (null != index)) {
+                if (project.settings.useIndex && (null != indeces)) {
                     String className = classPath.replace(File.separatorChar, '.');
-                    IndexUtils.getJarsForClass(index, className, deploymentJarsList);
+                    IndexUtils.getJarsForClass(indeces, className, deploymentJarsList);
                 }
                 
                 for (int j = 0; j < deploymentJarsList.size(); j++) {
@@ -297,7 +313,7 @@ public class Deployer {
         
         for (int i = 0; i < project.resources.size(); i++) {
             final DeployerResourceInfo resourceInfo = project.resources.get(i);
-            String resourceFullPath = JavaUtils.combinePaths(project.path, resourceInfo.path);
+            String resourceFullPath = FilenameUtils.concat(project.path, resourceInfo.path);
             if (JavaUtils.isFile(resourceFullPath)) {
                 if (JavaUtils.isTheSamePath(resourceFullPath, changedFile)) {
                     for (int j = 0; j < resourceInfo.deploymentPaths.size(); j++) {
@@ -311,11 +327,11 @@ public class Deployer {
             }
             else {
                 resourceFullPath = JavaUtils.ensurePathHasSeparatorAtTheEnd(resourceFullPath);
-                if (JavaUtils.isParentOf(resourceFullPath, changedFile)) {
+                if (FilenameUtils.directoryContains(resourceFullPath, changedFile)) {
                     for (int j = 0; j < resourceInfo.deploymentPaths.size(); j++) {
                         
                         final String relativeResourcePath = changedFile.substring(resourceFullPath.length());
-                        final String resourceDeploymentPath = JavaUtils.combinePaths(resourceInfo.deploymentPaths.get(j), 
+                        final String resourceDeploymentPath = FilenameUtils.concat(resourceInfo.deploymentPaths.get(j), 
                                 relativeResourcePath);
                         
                         if (!filesToDeploy.containsKey(changedFile)) {
@@ -337,7 +353,7 @@ public class Deployer {
         if (null != changedFilesNodes) {
             for (int i = 0; i < changedFilesNodes.size(); i++) {
                 Node changedFilesNode = (Node)changedFilesNodes.get(i);
-                changedFiles.add(JavaUtils.combinePaths(projectPath, changedFilesNode.getText()));
+                changedFiles.add(FilenameUtils.concat(projectPath, changedFilesNode.getText()));
             }
         }
     }
@@ -370,19 +386,20 @@ public class Deployer {
     }
 
     private static IndexInfo loadIndex(final Document configurationXmlDocument, List<DeployerProject> projects) {
-        IndexInfo index = null;
+        IndexInfo indeces = null;
         boolean loadIndex = false;
         for (int i = 0; !loadIndex && (i < projects.size()); i++) {
             loadIndex = projects.get(i).settings.useIndex;
         }
         
         if (loadIndex) {
-            final String indexFileName = XmlUtils.getChildNodeTrimmedText(configurationXmlDocument, "index");
+            final String indexFileName = XmlUtils.getChildNodeTrimmedText(
+                    configurationXmlDocument.getRootElement(), "index");
             if (!StringUtils.isNullOrEmpty(indexFileName)) {
-                index = IndexUtils.loadIndeces(indexFileName);
+                indeces = IndexUtils.loadIndeces(indexFileName);
             }
         }
-        return index;
+        return indeces;
     }
 
     @SuppressWarnings("rawtypes")
@@ -418,7 +435,7 @@ public class Deployer {
                         DeployerResourceInfo resourceInfo = new DeployerResourceInfo();
                         Node resourceNode = (Node)resources.get(j);
                         resourceInfo.path = XmlUtils.getAttributeValue(resourceNode, "path");
-                        File resourcePath = new File(JavaUtils.combinePaths(project.path, resourceInfo.path));
+                        File resourcePath = new File(FilenameUtils.concat(project.path, resourceInfo.path));
                         if (!resourcePath.exists()) {
                             throw new ApplicationException("Resource path \"" + resourceInfo.path + "\" doesn't exists in the project \"" 
                                     + project.path + "\" ");

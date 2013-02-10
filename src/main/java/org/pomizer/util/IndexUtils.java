@@ -3,9 +3,11 @@ package org.pomizer.util;
 import java.io.BufferedReader;
 import java.io.FileReader;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.List;
 import java.util.regex.Pattern;
 
+import org.apache.commons.io.FilenameUtils;
 import org.pomizer.model.IndexInfo;
 import org.pomizer.render.JarIndexRenderer;
 
@@ -126,7 +128,49 @@ public class IndexUtils {
         }
     }
 
-    public static void getJarsForClass(final IndexInfo index, final String className, final List<String> deploymentJarsList) {
-        // TODO Implement
+    public static void getJarsForClass(final IndexInfo indeces, final String fullClassName, 
+            final List<String> deploymentJarsList) {
+        
+        if ((null != indeces) && (null != deploymentJarsList)) {
+            
+            final String className = ClassUtils.getClassNameFromFullName(fullClassName);
+            final String packageName = ClassUtils.getPackageFromFullName(fullClassName);
+            
+            JavaUtils.printToConsole("Getting JARs for class: " + fullClassName + "...");
+        
+            int classIndex = Arrays.binarySearch(indeces.classNames, className);
+            if (classIndex >= 0) {
+            
+                int lowerClassIndex = classIndex;
+                while ((lowerClassIndex >= 0) && (indeces.classNames[lowerClassIndex].equals(className))) {
+                    lowerClassIndex--;
+                }
+                lowerClassIndex++;
+            
+                int upperClassIndex = classIndex;
+                while ((upperClassIndex < indeces.classesCount) && (indeces.classNames[upperClassIndex].equals(className))) {
+                    upperClassIndex++;
+                }
+                upperClassIndex--;
+                
+                for (int i = lowerClassIndex; i <= upperClassIndex; i++) {
+                    int packageIndex = indeces.classNamesPackageIndex[i];
+                    if (indeces.packageNames[packageIndex].equals(packageName)) {
+                        for (int j = 0; j < indeces.classNamesJarIndeces[i].length; j++) {
+                            int jarIndex = indeces.classNamesJarIndeces[i][j];
+                            int basePathIndex = indeces.jarNamesBasePathIndex[jarIndex];
+                            String jarPath = FilenameUtils.concat(indeces.basePaths[basePathIndex], 
+                                    indeces.jarNames[jarIndex]);
+                            if (-1 == deploymentJarsList.indexOf(jarPath)) {
+                                deploymentJarsList.add(jarPath);
+                            }
+                        }
+                    }
+                }
+            }
+            else {
+                JavaUtils.printToConsole("Error: Could not find jar for class: " + fullClassName);
+            }
+        }
     }
 }
