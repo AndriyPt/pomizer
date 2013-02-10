@@ -7,6 +7,7 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+import org.apache.commons.io.FilenameUtils;
 import org.dom4j.Document;
 import org.dom4j.tree.DefaultElement;
 import org.pomizer.constant.GlobalSettings;
@@ -40,7 +41,7 @@ public class PomFromIndexCreator {
         if (args.length > 2) {
             relativeSourcesPath = args[2];
         }
-        JavaUtils.checkDirectoryExists(JavaUtils.combinePaths(projectDirectory, relativeSourcesPath));
+        JavaUtils.checkDirectoryExists(FilenameUtils.concat(projectDirectory, relativeSourcesPath));
 
         processFile(indexFileName, projectDirectory, relativeSourcesPath);
     }
@@ -48,7 +49,7 @@ public class PomFromIndexCreator {
     private static void processFile(final String indexFileName, final String projectDirectory,
             final String relativeSourcesPath) {
 
-        final String pomFileName = JavaUtils.combinePaths(projectDirectory, "pom.xml");
+        final String pomFileName = FilenameUtils.concat(projectDirectory, "pom.xml");
         final String projectName = new File(projectDirectory).getName();
         final List<Dependency> dependencies = new ArrayList<Dependency>();
 

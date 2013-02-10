@@ -10,13 +10,14 @@ import java.io.InputStreamReader;
 import java.net.URL;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
-import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 import java.util.zip.ZipOutputStream;
 
 import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.FilenameUtils;
 
 public class JavaUtils {
 
@@ -39,14 +40,8 @@ public class JavaUtils {
         return new File(".").getAbsolutePath();
     }
 
-    public static String combinePaths(final String path1, final String path2) {
-        File file1 = new File(path1);
-        File file2 = new File(file1, path2);
-        return file2.getAbsolutePath();
-    }
-
     public static String getPathToFileInCurrentDirectory(final String filename) {
-        return combinePaths(getCurrentDirectory(), filename);
+        return FilenameUtils.concat(getCurrentDirectory(), filename);
     }
 
     public static boolean containsDirectoriesInPath(final String path, final String... directories) {
@@ -110,25 +105,6 @@ public class JavaUtils {
         return result;
     }
     
-    public static boolean isParentOf(final String directoryPath, final String fileName) 
-            throws IOException {
-
-        boolean result = false;
-        
-        File directoryFile = new File(directoryPath).getCanonicalFile();
-        File childFile = new File(fileName).getCanonicalFile();
-
-        File parentFile = childFile;
-        while (null != parentFile) {
-            if (directoryFile.equals(parentFile)) {
-                result = true;
-                break;
-            }
-            parentFile = parentFile.getParentFile();
-        }
-        return result;
-    }
-    
     public static String ensurePathHasSeparatorAtTheEnd(final String path) {
         String result = path;
         if (!StringUtils.isNullOrEmpty(result)) {
@@ -160,46 +136,36 @@ public class JavaUtils {
         return file.getName();
     }
     
-    
-    public static String getFileNameWithoutExtension(final String fullFileName) {
+    public static void addFilesToExistingZip(String jarPath, Map<String, List<String>> files) throws IOException {
         
-        String result = getFileName(fullFileName);
-        int index = result.lastIndexOf('.');
-        
-        if (-1 != index) {
-            result = result.substring(0, index);
-        }
-        
-        return result;
-    }
-
-    public static void addFilesToExistingZip(String jarPath, Map<String, Collection<File>> files) throws IOException {
-        
-        final File tempFile = File.createTempFile("jar_temp_file", null);
-        tempFile.delete();
+        //TODO: Check if such JAR would be read by Java
+        final File sourceTempFile = File.createTempFile("jar_source_temp_file_", null);
+        sourceTempFile.delete();
         
         final File jarFile = new File(jarPath);
-        FileUtils.copyFile(jarFile, tempFile);
+        FileUtils.copyFile(jarFile, sourceTempFile);
+        
+        final File destinationTempFile = File.createTempFile("jar_destination_temp_file_", null);
+        destinationTempFile.delete();
 
         byte[] buffer = new byte[1024];
 
-        ZipInputStream zipInputStream = new ZipInputStream(new FileInputStream(tempFile));
-        //TODO: Check if we can output to real file under JBoss
-        ZipOutputStream zipOutputStream = new ZipOutputStream(new FileOutputStream(jarFile));
+        ZipInputStream zipInputStream = new ZipInputStream(new FileInputStream(sourceTempFile));
+        ZipOutputStream zipOutputStream = new ZipOutputStream(new FileOutputStream(destinationTempFile));
 
         ZipEntry entry = zipInputStream.getNextEntry();
         while (null != entry) {
             String name = entry.getName();
-            boolean fileChanged = true;
+            boolean fileChanged = false;
             for (String parentPath : files.keySet()) {
-                for (File file : files.get(parentPath)) { 
-                    if (file.getName().equals(name)) {
-                        fileChanged = false;
+                for (String fileName : files.get(parentPath)) { 
+                    if (fileName.replace(File.separatorChar, '/').equals(name)) {
+                        fileChanged = true;
                         break;
                     }
                 }
             }
-            if (fileChanged) {
+            if (!fileChanged) {
                 zipOutputStream.putNextEntry(new ZipEntry(name));
                 int length;
                 while ((length = zipInputStream.read(buffer)) > 0) {
@@ -212,9 +178,9 @@ public class JavaUtils {
         zipInputStream.close();
         
         for (String parentPath : files.keySet()) {
-            for (File file : files.get(parentPath)) { 
-                InputStream in = new FileInputStream(file);
-                zipOutputStream.putNextEntry(new ZipEntry(file.getName()));
+            for (String fileName : files.get(parentPath)) { 
+                InputStream in = new FileInputStream(FilenameUtils.concat(parentPath, fileName));
+                zipOutputStream.putNextEntry(new ZipEntry(fileName.replace(File.separatorChar, '/')));
                 int len;
                 while ((len = in.read(buffer)) > 0) {
                     zipOutputStream.write(buffer, 0, len);
@@ -224,7 +190,9 @@ public class JavaUtils {
             }
         }
         zipOutputStream.close();
-        tempFile.delete();
+        FileUtils.copyFile(destinationTempFile, jarFile);
+        sourceTempFile.delete();
+        destinationTempFile.delete();
     }
     
     public static void downloadUrl(final String url) throws IOException {
