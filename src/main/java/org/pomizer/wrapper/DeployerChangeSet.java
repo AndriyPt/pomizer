@@ -1,7 +1,9 @@
 package org.pomizer.wrapper;
 
 import java.io.File;
+import java.io.IOException;
 
+import org.apache.commons.io.FileUtils;
 import org.dom4j.Document;
 import org.dom4j.DocumentException;
 import org.dom4j.DocumentHelper;
@@ -98,5 +100,9 @@ public class DeployerChangeSet {
     
     public void save() {
         XmlUtils.saveXmlDocument(document, fileName);
+    }
+
+    public void delete() throws IOException {
+        FileUtils.forceDelete(new File(fileName));
     }
 }
