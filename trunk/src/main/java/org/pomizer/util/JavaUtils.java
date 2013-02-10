@@ -8,6 +8,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.URL;
+import java.net.URLConnection;
 import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.List;
@@ -18,6 +19,8 @@ import java.util.zip.ZipOutputStream;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
+
+import sun.misc.BASE64Encoder;
 
 public class JavaUtils {
 
@@ -136,22 +139,19 @@ public class JavaUtils {
         return file.getName();
     }
     
-    public static void addFilesToExistingZip(String jarPath, Map<String, List<String>> files) throws IOException {
+    public static void addFilesToExistingZip(final File jarFile, 
+            final Map<String, List<String>> files) throws IOException {
         
-        //TODO: Check if such JAR would be read by Java
         final File sourceTempFile = File.createTempFile("jar_source_temp_file_", null);
         sourceTempFile.delete();
         
-        final File jarFile = new File(jarPath);
         FileUtils.copyFile(jarFile, sourceTempFile);
         
-        final File destinationTempFile = File.createTempFile("jar_destination_temp_file_", null);
-        destinationTempFile.delete();
-
         byte[] buffer = new byte[1024];
 
         ZipInputStream zipInputStream = new ZipInputStream(new FileInputStream(sourceTempFile));
-        ZipOutputStream zipOutputStream = new ZipOutputStream(new FileOutputStream(destinationTempFile));
+        ZipOutputStream zipOutputStream = new ZipOutputStream(new FileOutputStream(jarFile));
+        zipOutputStream.setLevel(ZipOutputStream.STORED);
 
         ZipEntry entry = zipInputStream.getNextEntry();
         while (null != entry) {
@@ -159,7 +159,7 @@ public class JavaUtils {
             boolean fileChanged = false;
             for (String parentPath : files.keySet()) {
                 for (String fileName : files.get(parentPath)) { 
-                    if (fileName.replace(File.separatorChar, '/').equals(name)) {
+                    if (adjustJarFileName(fileName).equals(name)) {
                         fileChanged = true;
                         break;
                     }
@@ -180,7 +180,7 @@ public class JavaUtils {
         for (String parentPath : files.keySet()) {
             for (String fileName : files.get(parentPath)) { 
                 InputStream in = new FileInputStream(FilenameUtils.concat(parentPath, fileName));
-                zipOutputStream.putNextEntry(new ZipEntry(fileName.replace(File.separatorChar, '/')));
+                zipOutputStream.putNextEntry(new ZipEntry(adjustJarFileName(fileName)));
                 int len;
                 while ((len = in.read(buffer)) > 0) {
                     zipOutputStream.write(buffer, 0, len);
@@ -190,15 +190,27 @@ public class JavaUtils {
             }
         }
         zipOutputStream.close();
-        FileUtils.copyFile(destinationTempFile, jarFile);
         sourceTempFile.delete();
-        destinationTempFile.delete();
+    }
+
+    private static String adjustJarFileName(final String fileName) {
+        if (File.separatorChar == '/') {
+            return fileName;
+        }
+        return fileName.replace(File.separatorChar, '/');
     }
     
     public static void downloadUrl(final String url) throws IOException {
         final URL downloader = new URL(url);
+        final URLConnection urlConnection = downloader.openConnection();
+        if (null != downloader.getUserInfo()) {
+            BASE64Encoder encoder = new BASE64Encoder();
+            final String basicAuth = "Basic " + new String(encoder.encode(
+                    downloader.getUserInfo().getBytes()));
+            urlConnection.setRequestProperty("Authorization", basicAuth);
+        }
         final BufferedReader inputStream = new BufferedReader(new InputStreamReader(
-                downloader.openStream()));
+                urlConnection.getInputStream()));
         while (null != inputStream.readLine());
         inputStream.close();        
     }
