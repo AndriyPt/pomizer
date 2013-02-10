@@ -151,11 +151,17 @@ public class Deployer {
             
             final File changedFile = new File(changedFileName);
             
-            for (String pathToDeploy : filesToDeploy.get(changedFileName)) {
-                JavaUtils.printToConsole(String.format("  file \"%s\" to \"%s\"...", 
-                        changedFile, pathToDeploy));
-                getBackupFile(changeset, backupFolderFile, pathToDeploy);
-                FileUtils.copyFile(changedFile, new File(pathToDeploy));
+            if (changedFile.exists()) {
+                for (String pathToDeploy : filesToDeploy.get(changedFileName)) {
+                    JavaUtils.printToConsole(String.format("  file \"%s\" to \"%s\"...", 
+                            changedFileName, pathToDeploy));
+                    getBackupFile(changeset, backupFolderFile, pathToDeploy);
+                    FileUtils.copyFile(changedFile, new File(pathToDeploy));
+                }
+            }
+            else {
+                JavaUtils.printToConsole(String.format("  file \"%s\" doesn\'t exist...", 
+                        changedFileName));
             }
         }
     }
