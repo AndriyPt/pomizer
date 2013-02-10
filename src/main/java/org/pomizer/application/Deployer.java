@@ -87,10 +87,11 @@ public class Deployer {
             
             final String backupFolder = FilenameUtils.concat(FilenameUtils.getFullPath(configurationFileName),
                     BACKUP_FOLDER);
-            FileUtils.forceMkdir(new File(backupFolder));
+            final File backupFolderFile = new File(backupFolder); 
+            FileUtils.forceMkdir(backupFolderFile);
             
-            deployJars(jarsToDeploy, changeset, backupFolder);
-            deployFiles(filesToDeploy, changeset, backupFolder);
+            deployJars(jarsToDeploy, changeset, backupFolderFile);
+            deployFiles(filesToDeploy, changeset, backupFolderFile);
             processUrls(postProcessCallUrls);
             processCommands(postProcessCallCommands, jarsToDeploy, filesToDeploy);
             
@@ -155,7 +156,7 @@ public class Deployer {
             }
             
             if (foundUpdatePath) {
-                JavaUtils.printToConsole("Executing command: " + commandInfo.commandLine);
+                JavaUtils.printToConsole("  command: " + commandInfo.commandLine);
                 JavaUtils.executeCommand(commandInfo.commandLine);
             }
         }
@@ -164,35 +165,22 @@ public class Deployer {
     private static void processUrls(List<String> postProcessCallUrls) throws IOException {
         JavaUtils.printToConsole("Calling URLs...");
         for (String url : postProcessCallUrls) {
-            JavaUtils.printToConsole("Calling \"" + url + "\"...");
+            JavaUtils.printToConsole("  " + url + " ...");
             JavaUtils.downloadUrl(url);
         }
     }
 
     private static void deployFiles(final Map<String, List<String>> filesToDeploy, final DeployerChangeSet changeset,
-            final String backupFolder) throws IOException {
+            final File backupFolderFile) throws IOException {
         
         JavaUtils.printToConsole("Deploying files...");
         for (String changedFileName : filesToDeploy.keySet()) {
             
-            int position = changeset.indexOf(changedFileName);
-            File backupFile;
-            if (-1 == position) {
-                backupFile = File.createTempFile(FilenameUtils.getName(changedFileName).replace(
-                        File.separatorChar, '_').replace('.', '_')  + '_', BACKUP_FILE_EXTENSION, new File(BACKUP_FOLDER));
-                backupFile.delete();
-                FileUtils.copyFile(new File(changedFileName), backupFile);
-                changeset.add(changedFileName, backupFile.getAbsolutePath());
-                changeset.save();
-            }
-            else {
-                backupFile = new File(backupFolder, changeset.getBackupPath(position));
-            }
-            
+            getBackupFile(changeset, backupFolderFile, changedFileName);
             final File changedFile = new File(changedFileName);
             
             for (String pathToDeploy : filesToDeploy.get(changedFileName)) {
-                JavaUtils.printToConsole(String.format("Deploying file \"%s\" to \"%s\"...", 
+                JavaUtils.printToConsole(String.format("  file \"%s\" to \"%s\"...", 
                         changedFile, pathToDeploy));
                 FileUtils.copyFile(changedFile, new File(pathToDeploy));
             }
@@ -200,24 +188,11 @@ public class Deployer {
     }
 
     private static void deployJars(final Map<String, Map<String, String>> jarsToDeploy, 
-            final DeployerChangeSet changeset, final String backupFolder) throws IOException {
+            final DeployerChangeSet changeset, final File backupFolderFile) throws IOException {
         
         JavaUtils.printToConsole("Deploying jars...");
-        final File backupFolderFile = new File(backupFolder);
         for (String jar : jarsToDeploy.keySet()) {
-            int position = changeset.indexOf(jar);
-            File backupFile;
-            if (-1 == position) {
-                backupFile = File.createTempFile(FilenameUtils.getName(jar).replace('.', '_')  + '_', 
-                        BACKUP_FILE_EXTENSION, backupFolderFile);
-                backupFile.delete();
-                FileUtils.copyFile(new File(jar), backupFile);
-                changeset.add(jar, backupFile.getAbsolutePath());
-                changeset.save();
-            }
-            else {
-                backupFile = new File(backupFolder, changeset.getBackupPath(position));
-            }
+            File backupFile = getBackupFile(changeset, backupFolderFile, jar);
             
             Map<String, List<String>> filesToAdd = new HashMap<String, List<String>>();
             for (String classPath : jarsToDeploy.get(jar).keySet()) {
@@ -247,8 +222,31 @@ public class Deployer {
                 }
             }
             
-            JavaUtils.addFilesToExistingZip(jar, filesToAdd);
+            final File tempJarFile = File.createTempFile("jar_temp_file_", null);
+            tempJarFile.delete();
+            FileUtils.copyFile(backupFile, tempJarFile);
+            JavaUtils.addFilesToExistingZip(tempJarFile, filesToAdd);
+            FileUtils.copyFile(tempJarFile, new File(jar));
+            tempJarFile.delete();
         }
+    }
+
+    private static File getBackupFile(final DeployerChangeSet changeset, final File backupFolderFile, String changedFile)
+            throws IOException {
+        int position = changeset.indexOf(changedFile);
+        File backupFile;
+        if (-1 == position) {
+            backupFile = File.createTempFile(FilenameUtils.getName(changedFile).replace('.', '_')  + '_', 
+                    BACKUP_FILE_EXTENSION, backupFolderFile);
+            backupFile.delete();
+            FileUtils.copyFile(new File(changedFile), backupFile);
+            changeset.add(changedFile, backupFile.getAbsolutePath());
+            changeset.save();
+        }
+        else {
+            backupFile = new File(changeset.getBackupPath(position));
+        }
+        return backupFile;
     }
 
     private static void processProjectChanges(final List<DeployerProject> projects, final IndexInfo indeces,
