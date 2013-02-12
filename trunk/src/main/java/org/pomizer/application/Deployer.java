@@ -156,8 +156,18 @@ public class Deployer {
                 for (String pathToDeploy : filesToDeploy.get(changedFileName)) {
                     JavaUtils.printToConsole(String.format("  file \"%s\" to \"%s\"...", 
                             changedFileName, pathToDeploy));
-                    getBackupFile(changeset, backupFolderFile, pathToDeploy);
-                    FileUtils.copyFile(changedFile, new File(pathToDeploy));
+                    final File pathToDeployFile = new File(pathToDeploy);
+                    if (pathToDeployFile.exists()) { 
+                        getBackupFile(changeset, backupFolderFile, pathToDeploy);
+                    }
+                    else {
+                        int position = changeset.indexOf(pathToDeploy);
+                        if (-1 == position) {
+                            changeset.add(pathToDeploy, "");
+                            changeset.save();
+                        }
+                    }
+                    FileUtils.copyFile(changedFile, pathToDeployFile);
                 }
             }
             else {
@@ -211,16 +221,16 @@ public class Deployer {
         }
     }
 
-    private static File getBackupFile(final DeployerChangeSet changeset, final File backupFolderFile, String changedFile)
-            throws IOException {
-        int position = changeset.indexOf(changedFile);
+    private static File getBackupFile(final DeployerChangeSet changeset, final File backupFolderFile, 
+            final String fileName) throws IOException {
+        int position = changeset.indexOf(fileName);
         File backupFile;
         if (-1 == position) {
-            backupFile = File.createTempFile(FilenameUtils.getName(changedFile).replace('.', '_')  + '_', 
+            backupFile = File.createTempFile(FilenameUtils.getName(fileName).replace('.', '_')  + '_', 
                     BACKUP_FILE_EXTENSION, backupFolderFile);
             backupFile.delete();
-            FileUtils.copyFile(new File(changedFile), backupFile);
-            changeset.add(changedFile, backupFile.getAbsolutePath());
+            FileUtils.copyFile(new File(fileName), backupFile);
+            changeset.add(fileName, backupFile.getAbsolutePath());
             changeset.save();
         }
         else {

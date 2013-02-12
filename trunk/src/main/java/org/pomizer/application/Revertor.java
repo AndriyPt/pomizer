@@ -11,6 +11,7 @@ import org.dom4j.Document;
 import org.pomizer.model.DeployerCommandInfo;
 import org.pomizer.util.DeployerProjectUtils;
 import org.pomizer.util.JavaUtils;
+import org.pomizer.util.StringUtils;
 import org.pomizer.util.XmlUtils;
 import org.pomizer.wrapper.DeployerChangeSet;
 
@@ -61,11 +62,18 @@ public class Revertor {
                         changedFiles.add(changedFileName);
                     }
                     
-                    final File backupFile = new File(changeset.getBackupPath(i));
-                    filesToDelete.add(backupFile);
+                    final String backupFileName = changeset.getBackupPath(i);
                     
                     JavaUtils.printToConsole("  reverting \"" + changedFileName + "\"...");
-                    FileUtils.copyFile(backupFile, new File(changedFileName));
+                    final File changedFile = new File(changedFileName);
+                    if (StringUtils.isNullOrEmptyOrBlank(backupFileName)) {
+                        filesToDelete.add(changedFile);
+                    }
+                    else {
+                        final File backupFile = new File(backupFileName);
+                        filesToDelete.add(backupFile);
+                        FileUtils.copyFile(backupFile, changedFile);
+                    }
                 }
                 changeset.delete();
                 
