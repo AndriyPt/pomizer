@@ -14,6 +14,7 @@ import org.apache.commons.io.filefilter.WildcardFileFilter;
 import org.dom4j.Document;
 import org.dom4j.DocumentException;
 import org.dom4j.Node;
+import org.pomizer.exception.ApplicationException;
 import org.pomizer.model.DeployerCommandInfo;
 import org.pomizer.model.DeployerProject;
 import org.pomizer.model.DeployerResourceInfo;
@@ -230,7 +231,7 @@ public class Deployer {
 
     private static void processProjectChanges(final List<DeployerProject> projects, final IndexInfo indeces,
             final Map<String, Map<String, String>> jarsToDeploy, final Map<String, List<String>> filesToDeploy)
-            throws IOException, DocumentException {
+            throws IOException, DocumentException, ApplicationException {
         
         for (int i = 0; i < projects.size(); i++) {
             
@@ -323,7 +324,7 @@ public class Deployer {
 
     @SuppressWarnings("rawtypes")
     private static void loadChangesetForProject(final String projectPath, 
-            final List<String> changedFiles) throws IOException, DocumentException {
+            final List<String> changedFiles) throws IOException, DocumentException, ApplicationException {
         
         Document projectChangeset = SvnUtils.getChangeset(projectPath);
         List changedFilesNodes = projectChangeset.selectNodes("/status/target/entry/@path");
