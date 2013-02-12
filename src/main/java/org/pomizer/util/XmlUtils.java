@@ -2,11 +2,11 @@ package org.pomizer.util;
 
 import java.io.FileWriter;
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.HashMap;
 
 import org.dom4j.Document;
 import org.dom4j.DocumentException;
+import org.dom4j.DocumentHelper;
 import org.dom4j.Element;
 import org.dom4j.Node;
 import org.dom4j.io.OutputFormat;
@@ -110,9 +110,8 @@ public class XmlUtils {
         return reader.read(xmlFileName);
     }
     
-    public static Document loadXmlDocument(final InputStream inputStream) throws DocumentException {
-        SAXReader reader = new SAXReader();
-        return reader.read(inputStream);
+    public static Document loadXmlDocumentFromString(final String content) throws DocumentException {
+        return DocumentHelper.parseText(content);
     }
     
     public static void saveXmlDocument(final Document xmlDocument, final String xmlFileName) {
