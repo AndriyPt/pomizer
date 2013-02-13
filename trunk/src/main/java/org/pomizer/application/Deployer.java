@@ -10,6 +10,7 @@ import java.util.Map;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
+import org.apache.commons.io.filefilter.TrueFileFilter;
 import org.apache.commons.io.filefilter.WildcardFileFilter;
 import org.dom4j.Document;
 import org.dom4j.DocumentException;
@@ -341,7 +342,25 @@ public class Deployer {
         if (null != changedFilesNodes) {
             for (int i = 0; i < changedFilesNodes.size(); i++) {
                 Node changedFilesNode = (Node)changedFilesNodes.get(i);
-                changedFiles.add(FilenameUtils.concat(projectPath, changedFilesNode.getText()));
+                final String changedFileName = FilenameUtils.concat(projectPath, changedFilesNode.getText());
+                final File changedFile = new File(changedFileName);
+                
+                if (changedFile.exists()) {
+                    if (changedFile.isDirectory()) {
+                        
+                       final Collection<File> files = FileUtils.listFiles(changedFile, TrueFileFilter.INSTANCE, 
+                               TrueFileFilter.INSTANCE);
+                       for (File file : files) {
+                           if (file.isFile()) {
+                               changedFiles.add(file.getAbsolutePath());
+                           }
+                       }
+                        
+                    }
+                    else {
+                        changedFiles.add(changedFileName);
+                    }
+                }
             }
         }
     }
