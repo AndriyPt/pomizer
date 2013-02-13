@@ -105,4 +105,24 @@ public class StringUtils {
         
         return result;
     }
+    
+    public static int getIndexOfDifferentChar(final String first, final String second) {
+        
+        int result = -1;
+        
+        if (null == first) {
+            result = 0;
+        }
+        else {
+            if (!first.equals(second)) {
+                if (null == second) {
+                    result = 0;
+                }
+                int length = Math.min(first.length(), second.length());
+                for (result = 0; (result < length) && (first.charAt(result) == second.charAt(result)) ; result++);
+            }
+        }
+        
+        return result;
+    }
 }

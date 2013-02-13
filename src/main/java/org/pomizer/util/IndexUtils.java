@@ -139,6 +139,7 @@ public class IndexUtils {
             JavaUtils.printToConsole("Getting JARs for class: " + fullClassName + "...");
         
             int classIndex = Arrays.binarySearch(indeces.classNames, className);
+            boolean foundClass = false;
             if (classIndex >= 0) {
             
                 int lowerClassIndex = classIndex;
@@ -156,21 +157,45 @@ public class IndexUtils {
                 for (int i = lowerClassIndex; i <= upperClassIndex; i++) {
                     int packageIndex = indeces.classNamesPackageIndex[i];
                     if (indeces.packageNames[packageIndex].equals(packageName)) {
+                        foundClass = true;
                         for (int j = 0; j < indeces.classNamesJarIndeces[i].length; j++) {
-                            int jarIndex = indeces.classNamesJarIndeces[i][j];
-                            int basePathIndex = indeces.jarNamesBasePathIndex[jarIndex];
-                            String jarPath = FilenameUtils.concat(indeces.basePaths[basePathIndex], 
-                                    indeces.jarNames[jarIndex]);
-                            if (-1 == deploymentJarsList.indexOf(jarPath)) {
-                                deploymentJarsList.add(jarPath);
-                            }
+                            addJarToDeploymentList(indeces, deploymentJarsList, indeces.classNamesJarIndeces[i][j]);
                         }
                     }
+                }
+            }
+                
+            if (!foundClass) {
+                int packageIndex = Arrays.binarySearch(indeces.packageNames, packageName);
+                if (packageIndex < 0) {
+                    packageIndex = -packageIndex - 1;
+                    if (0 != packageIndex) {
+                        int previousPackageDifferentCharIndex = StringUtils.getIndexOfDifferentChar(packageName, 
+                                indeces.packageNames[packageIndex - 1]);
+                        int nextPackageDifferentCharIndex = StringUtils.getIndexOfDifferentChar(packageName, 
+                                indeces.packageNames[packageIndex + 1]);
+                        if (nextPackageDifferentCharIndex < previousPackageDifferentCharIndex) {
+                            packageIndex--;
+                        }
+                    }
+                }
+                for (int i = 0; i < indeces.packageNamesJarIndeces[packageIndex].length; i++) {
+                    addJarToDeploymentList(indeces, deploymentJarsList, indeces.packageNamesJarIndeces[packageIndex][i]);
                 }
             }
             else {
                 JavaUtils.printToConsole("Error: Could not find jar for class: " + fullClassName);
             }
+        }
+    }
+
+    private static void addJarToDeploymentList(final IndexInfo indeces, final List<String> deploymentJarsList,
+            final int jarIndex) {
+        int basePathIndex = indeces.jarNamesBasePathIndex[jarIndex];
+        String jarPath = FilenameUtils.concat(indeces.basePaths[basePathIndex], 
+                indeces.jarNames[jarIndex]);
+        if (-1 == deploymentJarsList.indexOf(jarPath)) {
+            deploymentJarsList.add(jarPath);
         }
     }
 }
