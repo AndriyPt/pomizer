@@ -165,16 +165,21 @@ public class IndexUtils {
                 }
             }
                 
-            if (!foundClass) {
+            if (!foundClass && (indeces.packageNames.length > 0)) {
                 int packageIndex = Arrays.binarySearch(indeces.packageNames, packageName);
                 if (packageIndex < 0) {
                     packageIndex = -packageIndex - 1;
                     if (0 != packageIndex) {
-                        int previousPackageDifferentCharIndex = StringUtils.getIndexOfDifferentChar(packageName, 
-                                indeces.packageNames[packageIndex - 1]);
-                        int nextPackageDifferentCharIndex = StringUtils.getIndexOfDifferentChar(packageName, 
-                                indeces.packageNames[packageIndex + 1]);
-                        if (nextPackageDifferentCharIndex < previousPackageDifferentCharIndex) {
+                        if (packageIndex < indeces.packageNames.length) {
+                            int previousPackageDifferentCharIndex = StringUtils.getIndexOfDifferentChar(packageName, 
+                                    indeces.packageNames[packageIndex - 1]);
+                            int nextPackageDifferentCharIndex = StringUtils.getIndexOfDifferentChar(packageName, 
+                                    indeces.packageNames[packageIndex]);
+                            if (nextPackageDifferentCharIndex < previousPackageDifferentCharIndex) {
+                                packageIndex--;
+                            }
+                        }
+                        else {
                             packageIndex--;
                         }
                     }
@@ -182,9 +187,6 @@ public class IndexUtils {
                 for (int i = 0; i < indeces.packageNamesJarIndeces[packageIndex].length; i++) {
                     addJarToDeploymentList(indeces, deploymentJarsList, indeces.packageNamesJarIndeces[packageIndex][i]);
                 }
-            }
-            else {
-                JavaUtils.printToConsole("Error: Could not find jar for class: " + fullClassName);
             }
         }
     }
