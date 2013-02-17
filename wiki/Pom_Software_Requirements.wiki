@@ -1,4 +1,4 @@
-#summary Software versions for POM creator
+#summary Software versions for POM creator.
 #labels Phase-Deploy
 
 = Software Requirements =
