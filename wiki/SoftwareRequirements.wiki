@@ -1,8 +1,0 @@
-#summary Software versions
-#labels Phase-Deploy
-
-= Software Requirements =
-
-In order to run tool you need following software
-  * Maven 2.2.1
-  * Java 1.6
