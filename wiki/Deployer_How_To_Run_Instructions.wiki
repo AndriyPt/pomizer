@@ -92,7 +92,7 @@ Configuration is presented in the form of the XML document with the following st
 
    </copy>
 
-   <!-- Call JMX job or any other web method at the end of the deployment -->
+    <!-- Call JMX job or any other web method at the end of the deployment -->
    <call_url><![CDATA[http://admin:password@server.com:8080/jmx-console/?action=invokeOp&methodIndex=10]]></call_url>
 
     <!-- Call command line in case if folder was updated -->
