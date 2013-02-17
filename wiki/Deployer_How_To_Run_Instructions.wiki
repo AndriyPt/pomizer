@@ -43,29 +43,33 @@ Configuration is presented in the form of the XML document with the following st
 
    <!-- Global settings (optional) -->
    <settings>
-
-      <use_index>true</use_index> <!-- Should project use index to match JARs for updated class. Default true -->
-
+      
+      <!-- Should project use index to match JARs for updated class. Default true -->
+      <use_index>true</use_index> 
    </settings>
 
    <!-- Location of the index file -->
-   <index>c:\Projects\MyProject\index\full_jars_index.dat</index>
+  <index>c:\Projects\MyProject\index\full_jars_index.dat</index>
 
-   <!- Project entry. Used for changes tracking -->
+    <!-- Project entry. Used for changes tracking from SVN -->
    <project path="c:\Projects\MyFirstProject">
 
+        <!-- Project settings. If present override global settings (optional) -->
        <settings>
 
          <use_index>true</use_index>
 
        </settings>
+       
 
+        <!-- Java source code location and output files location -->
        <sources path="src\main\java" output="target\classes"/>
 
+       <!-- Path to static resources for changes tracking -->
        <resources path="static_content\sample\jsps">
-
+         
+          <!-- Deployment path of the changed resource on server -->
           <target>\\server\webserver\home\sample\jsps</target> 
-
        </resources>
         
    </project>
@@ -74,24 +78,24 @@ Configuration is presented in the form of the XML document with the following st
 
        <sources path="src\main\java" output="target\classes">
 
+          <!-- Additional deployment path of changed class besides JARs determined by index -->
           <target>\\server\webserver\webapps\my-second-project.war\WEB-INF\lib\common.jar</target>
 
        </sources>
         
    </project>
 
+    <!-- Command to always copy files to target directories -->
    <copy path="C:\Projects\MyThirdProject\output\sample.html">
 
       <target>\\server\webserver\home\sample\html\sample.html</target>
 
    </copy>
 
-   <!-- Call JMX job at the end of the deployment -->
-
+   <!-- Call JMX job or any other web method at the end of the deployment -->
    <call_url><![CDATA[http://admin:password@server.com:8080/jmx-console/?action=invokeOp&methodIndex=10]]></call_url>
 
-   <!-- Call command line in case if folder was updated -->
-
+    <!-- Call command line in case if folder was updated -->
    <command updated_path="\\server\webserver\lib\" run="c:\tools\Sysinternals\pskill.exe \\server webserver.exe"/>
 
 </deployer>
