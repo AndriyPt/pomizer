@@ -1,4 +1,4 @@
-#summary Why we need such tool.
+#summary Why we need POM creation tool.
 #labels Phase-Requirements
 
 = Why we need such tool =
