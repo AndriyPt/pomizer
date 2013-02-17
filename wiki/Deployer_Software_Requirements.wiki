@@ -1,4 +1,4 @@
-#summary Software versions for Deployer
+#summary Software versions for Deployer.
 #labels Phase-Deploy
 
 = Software Requirements =
