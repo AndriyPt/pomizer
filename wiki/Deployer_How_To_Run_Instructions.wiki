@@ -1,0 +1,30 @@
+#summary How to run POM creator.
+#labels Phase-Deploy
+
+= How to run =
+
+== Pre-requirements ==
+
+You need to have installed SVN command line tool on your machine. You can install [http://www.sliksvn.com/en/download Slik SVN] or similar distribution.
+
+Note: svn should also be in the search path of the OS which you are using.
+
+== General information ==
+Tool is build from two components.
+
+First component org.pomizer.application.Deployer is used for deployment of the changes on the server. As command line parameter you should provide full path to configuration file.
+Component will create backup folder where all files would be copied before changes will be applied. Also changeset file will be created with listed file in the backup folder and their original path.
+
+Second component org.pomizer.application.Revertor is used to revert all changes done by Deployer. As command line parameter you should provide full path to configuration file.
+This component will copy all files from backup folder to original location based on the changeset file. After this changeset file will be deleted as well as copies of the original files.
+
+
+run any from two components using command line similar to following
+mvn exec:java -Dexec.mainClass="org.pomizer.application.Deploy" -Dexec.args="c:\deployer.project"
+
+Configuration file
+
+Configuration is presented in the form of the XML document with the following structure
+
+<deploy>
+</deploy>
