@@ -14,4 +14,4 @@ Project files which are present with partially accessible sources are
   * No maven support
 
 
-In order to setup project in such environment you need to spend a lot of time resolving different dependencies issues and compilation issues. Almost 100% automatic approach is proposed using POMIZER tool.
+In order to setup project in such environment you need to spend a lot of time resolving different dependencies issues and compilation issues. Almost 100% automatic approach is proposed using Pomizer toolset.
