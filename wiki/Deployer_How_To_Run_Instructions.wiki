@@ -22,10 +22,16 @@ Component will create backup folder where all files would be copied before chang
 
 This component will copy all files from backup folder to original location based on the changeset file. After this changeset file will be deleted as well as copies of the original files.
 
+== To run application you can use following approach ==
 
-run any from two components using command line similar to following
+  * Download source code of the tool
+  * execute 
+
+`mvn compile`
+
+  * run any from two components using command line similar to following
+
 `mvn exec:java -Dexec.mainClass="org.pomizer.application.Deploy" -Dexec.args="c:\deployer.project"`
-
 
 
 == Configuration file ==
