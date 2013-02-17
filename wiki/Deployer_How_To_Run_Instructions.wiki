@@ -40,8 +40,12 @@ Configuration is presented in the form of the XML document with the following st
 
 <code language="xml">
 <deployer>
+
    <settings>
+
       <use_index>true</use_index>
+
    </settings>
+
 </deployer>
 </code>
