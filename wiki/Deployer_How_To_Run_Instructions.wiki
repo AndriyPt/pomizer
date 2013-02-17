@@ -39,6 +39,9 @@ This component will copy all files from backup folder to original location based
 Configuration is presented in the form of the XML document with the following structure
 
 <code language="xml">
-<deploy>
-</deploy>
+<deployer>
+   <settings>
+      <use_index>true</use_index>
+   </settings>
+</deployer>
 </code>
