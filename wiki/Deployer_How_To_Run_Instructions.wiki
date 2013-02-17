@@ -41,14 +41,17 @@ Configuration is presented in the form of the XML document with the following st
 <code language="xml">
 <deployer>
 
+   <!-- Global settings (optional) -->
    <settings>
 
-      <use_index>true</use_index>
+      <use_index>true</use_index> <!-- Should project use index to match JARs for updated class. Default true -->
 
    </settings>
 
+   <!-- Location of the index file -->
    <index>c:\Projects\MyProject\index\full_jars_index.dat</index>
 
+   <!- Project entry. Used for changes tracking -->
    <project path="c:\Projects\MyFirstProject">
 
        <settings>
