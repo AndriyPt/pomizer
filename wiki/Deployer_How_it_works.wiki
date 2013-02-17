@@ -17,4 +17,4 @@ Following approach is used in this tool
 Post process URLs can be used to reload context using JMX method call
 
 Post process commands can be used to kill web server process in case if update libraries require this.
-For this purpose pskill utility for Windows from Sysinternals suite can be used.
+For this purpose pskill utility for Windows from [http://technet.microsoft.com/en-US/sysinternals Sysinternals suite] can be used.
