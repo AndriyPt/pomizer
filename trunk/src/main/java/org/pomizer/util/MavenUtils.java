@@ -312,7 +312,7 @@ public class MavenUtils {
             String line = null;
 
             while (null != (line = br.readLine())) {
-                if (line.startsWith(CompilationConstants.BUILD_SUCCESSFUL)) {
+                if (line.indexOf(CompilationConstants.BUILD_SUCCESSFUL) >= 0) {
                     successful = true;
                 }
             }

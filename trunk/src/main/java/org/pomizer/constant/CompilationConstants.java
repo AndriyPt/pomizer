@@ -4,7 +4,7 @@ import java.util.regex.Pattern;
 
 public class CompilationConstants {
 
-    public static final String BUILD_SUCCESSFUL = "[INFO] BUILD SUCCESSFUL";
+    public static final String BUILD_SUCCESSFUL = "BUILD SUCCESS";
     
     private static final String ERROR_PREFIX = Pattern.quote("[ERROR]");
     
