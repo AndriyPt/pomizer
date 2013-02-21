@@ -58,7 +58,9 @@ public class Deployer {
         
         try {
             JavaUtils.printToConsole("Loading configuration file...");
-            Document configurationXmlDocument = XmlUtils.loadXmlDocument(configurationFileName);
+            
+            Document configurationXmlDocument = XmlUtils.loadXmlDocumentWithValidation(configurationFileName, 
+                    "deployer.rng");
             
             DeployerSettings globalSettings = new DeployerSettings();
             List<DeployerProject> projects = new ArrayList<DeployerProject>();

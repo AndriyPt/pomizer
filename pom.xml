@@ -29,6 +29,11 @@
       <artifactId>commons-io</artifactId>
       <version>2.4</version>
     </dependency>
+    <dependency>
+      <groupId>thaiopensource</groupId>
+      <artifactId>jing</artifactId>
+      <version>20030619</version>
+    </dependency>
   </dependencies>
   <build>
     <plugins>

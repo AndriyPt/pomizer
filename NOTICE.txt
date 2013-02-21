@@ -20,3 +20,7 @@ http://commons.apache.org/io/
 Copyright 2010 The Apache Software Foundation 
 Apache License, Version 2.0, http://www.apache.org/licenses/LICENSE-2.0.txt
 
+jing 20030619
+http://www.thaiopensource.com/relaxng/jing.html
+Copyright 2001-2003 Thai Open Source Software Center Ltd
+Jing Copying Conditions, http://www.thaiopensource.com/relaxng/copying.html

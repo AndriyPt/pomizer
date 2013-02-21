@@ -1,0 +1,115 @@
+<?xml version="1.0"?>
+<grammar xmlns="http://relaxng.org/ns/structure/1.0">
+    <start>
+        <element name="deployer">
+            <interleave>
+                <ref name="settings_element" />
+                <optional>
+                    <element name="index">
+                        <ref name="notEmptyText" />
+                    </element>
+                </optional>
+
+                <zeroOrMore>
+                    <element name="project">
+                        <attribute name="path">
+                            <ref name="notEmptyText" />
+                        </attribute>
+                        <interleave>
+                            <ref name="settings_element" />
+                            <zeroOrMore>
+                                <element name="sources">
+                                    <interleave>
+                                        <attribute name="path">
+                                            <ref name="notEmptyText" />
+                                        </attribute>
+                                        <attribute name="output">
+                                            <ref name="notEmptyText" />
+                                        </attribute>
+                                    </interleave>
+                                    <zeroOrMore>
+                                        <ref name="target_element" />
+                                    </zeroOrMore>
+                                </element>
+                            </zeroOrMore>
+                            <zeroOrMore>
+                                <element name="resources">
+                                    <attribute name="path">
+                                        <ref name="notEmptyText" />
+                                    </attribute>
+                                    <oneOrMore>
+                                        <ref name="target_element" />
+                                    </oneOrMore>
+                                </element>
+                            </zeroOrMore>
+                        </interleave>
+                    </element>
+                </zeroOrMore>
+
+                <zeroOrMore>
+                    <element name="copy">
+                        <attribute name="path">
+                            <ref name="notEmptyText" />
+                        </attribute>
+                        <oneOrMore>
+                            <ref name="target_element" />
+                        </oneOrMore>
+                    </element>
+                </zeroOrMore>
+
+                <zeroOrMore>
+                    <element name="call_url">
+                        <ref name="notEmptyText" />
+                    </element>
+                </zeroOrMore>
+
+                <zeroOrMore>
+                    <element name="command">
+                        <interleave>
+                            <attribute name="updated_path">
+                                <ref name="notEmptyText" />
+                            </attribute>
+                            <attribute name="run">
+                                <ref name="notEmptyText" />
+                            </attribute>
+                        </interleave>
+                    </element>
+                </zeroOrMore>
+
+            </interleave>
+        </element>
+    </start>
+
+    <define name="settings_element">
+        <optional>
+            <element name="settings">
+                <optional>
+                    <element name="use_index">
+                        <choice>
+                            <value>true</value>
+                            <value>True</value>
+                            <value>TRUE</value>
+                            <value>false</value>
+                            <value>False</value>
+                            <value>FALSE</value>
+                        </choice>
+                    </element>
+                </optional>
+            </element>
+        </optional>
+    </define>
+
+    <define name="target_element">
+        <element name="target">
+            <ref name="notEmptyText" />
+        </element>
+    </define>
+    
+    <define name="notEmptyText">
+        <data type="string">
+            <except>
+                <value></value>
+            </except>
+        </data>
+    </define>
+</grammar> 
