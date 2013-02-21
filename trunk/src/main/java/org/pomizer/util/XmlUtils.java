@@ -18,7 +18,12 @@ import org.jaxen.SimpleNamespaceContext;
 import org.jaxen.XPath;
 import org.jaxen.dom4j.Dom4jXPath;
 import org.pomizer.constant.XmlConstants;
+import org.pomizer.exception.ApplicationException;
 import org.pomizer.model.Dependency;
+import org.xml.sax.InputSource;
+import org.xml.sax.SAXException;
+
+import com.thaiopensource.validate.ValidationDriver;
 
 public class XmlUtils {
 
@@ -109,6 +114,28 @@ public class XmlUtils {
         SAXReader reader = new SAXReader();
         return reader.read(xmlFileName);
     }
+    
+    private static void validateXmlDocumentUsingRng(final String xmlFileName, final String validationFileName) 
+            throws SAXException, IOException, ApplicationException {
+        
+        final ValidationDriver validationDriver = new ValidationDriver();
+        if (!validationDriver.loadSchema(new InputSource(
+                XmlUtils.class.getResourceAsStream("/" + validationFileName)))) {
+            throw new ApplicationException("Error during loading RNG schema");
+        }
+        if (!validationDriver.validate(ValidationDriver.fileInputSource(xmlFileName))) {
+            throw new ApplicationException("Error during parsing project file");
+        }
+    }
+    
+    public static Document loadXmlDocumentWithValidation(final String xmlFileName, 
+            final String rngFileName) throws DocumentException, IOException, SAXException, ApplicationException {
+        
+        validateXmlDocumentUsingRng(xmlFileName, rngFileName);
+        
+        return loadXmlDocument(xmlFileName);
+    }
+    
     
     public static Document loadXmlDocumentFromString(final String content) throws DocumentException {
         return DocumentHelper.parseText(content);
