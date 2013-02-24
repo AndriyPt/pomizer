@@ -1,0 +1,26 @@
+This software makes use of the following libraries:
+
+dom4j 1.6.1 
+http://dom4j.sourceforge.net/ 
+Copyright 2001-2005 (C) MetaStuff, Ltd. All Rights Reserved 
+BSD style, http://dom4j.sourceforge.net/license.html
+
+jaxen 1.1.1
+http://jaxen.codehaus.org/
+Copyright 2003-2006 The Werken Company. All Rights Reserved.
+Apache-style, http://jaxen.codehaus.org/license.html
+ 
+log4j 1.2.15 
+http://logging.apache.org/log4j/1.2/license.html 
+Copyright 2010 The Apache Software Foundation 
+Apache License, Version 2.0
+ 
+commons-io 2.4
+http://commons.apache.org/io/
+Copyright 2010 The Apache Software Foundation 
+Apache License, Version 2.0, http://www.apache.org/licenses/LICENSE-2.0.txt
+
+jing 20030619
+http://www.thaiopensource.com/relaxng/jing.html
+Copyright 2001-2003 Thai Open Source Software Center Ltd
+Jing Copying Conditions, http://www.thaiopensource.com/relaxng/copying.html
