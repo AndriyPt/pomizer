@@ -31,7 +31,7 @@ This component will copy all files from backup folder to original location based
 
   * run any from two components using command line similar to following
 
-`mvn exec:java -Dexec.mainClass="org.pomizer.application.Deploy" -Dexec.args="c:\Projects\deployer.project"`
+`mvn exec:java -Dexec.mainClass="org.pomizer.application.Deployer" -Dexec.args="c:\Projects\deployer.project"`
 
 
 == Configuration file ==
